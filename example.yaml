@@ -53,7 +53,7 @@ uart:
   parity: EVEN
 
 climate:
-- platform: esphome_fujitsu_halcyon
+- platform: fujitsu_halcyon
   name: ${halcyon_name}
   # Fujitsu devices use 0 and 1, but 2-15 should also work. Must not skip addresses
   controller_address: 1  # 0=Primary, 1=Secondary

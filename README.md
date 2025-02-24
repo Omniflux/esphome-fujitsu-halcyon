@@ -20,11 +20,6 @@ external_components:
 esphome:
   name: ${name}
   friendly_name: ${friendly_name}
-  platformio_options:
-    build_flags: 
-    - -std=gnu++2a
-    build_unflags:
-    - -std=gnu++11
 
 esp32:
   board: ${esp_board}
@@ -39,15 +34,12 @@ ota:
 sensor:
 - platform: uptime
   name: "Uptime"
-  update_interval: 60s
 
 button:
 - platform: restart
   name: Restart device
-  entity_category: config 
 - platform: safe_mode
   name: Safe Mode Boot
-  entity_category: diagnostic
 
 #logger:
 #  level: DEBUG
@@ -65,7 +57,7 @@ climate:
   controller_address: 1  # 0=Primary, 1=Secondary
   #temperature_controller_address: 0  # Fujitsu controller address to read temperature from
   #temperature_sensor_id: my_temp_sensor  # ESPHome sensor to read temperature from
-  #ignore_lock: true  # Ignore feature lock - not sure if this works
+  #ignore_lock: true  # Ignore feature lock
 
   # To capture communications for debugging / analysis
   # Use Wireshark with https://github.com/Omniflux/fujitsu-airstage-h-dissector

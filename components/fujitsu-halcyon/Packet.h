@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <bit>
 #include <cstdint>
 #include <limits>
 
@@ -119,10 +120,7 @@ struct Function {
 struct Status {};
 
 struct ByteMaskShiftData {
-    // GCC intrinsic - include <bit> and use std::countr_zero with c++20 (ESP-IDF 5+)
-    constexpr int countr_zero(uint8_t x) noexcept { return x ? __builtin_ctz(x) : std::numeric_limits<uint8_t>::digits; }
-
-    constexpr ByteMaskShiftData(uint8_t byte, uint8_t mask) : byte(byte), mask(mask), shift(countr_zero(mask)) {};
+    constexpr ByteMaskShiftData(uint8_t byte, uint8_t mask) : byte(byte), mask(mask), shift(std::countr_zero(mask)) {};
 
     const uint8_t byte;
     const uint8_t mask;

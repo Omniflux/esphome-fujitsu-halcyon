@@ -1,5 +1,9 @@
 #include "esphome-fujitsu-halcyon.h"
 
+#include <iomanip>
+#include <ios>
+#include <sstream>
+
 namespace esphome {
 namespace fujitsu_halcyon {
 
@@ -270,7 +274,24 @@ void FujitsuHalcyonController::update_from_device(const fujitsu_halcyon_controll
 
         // Error sensor (text)
         if (!data.Error.ErrorCode != this->error_code_sensor->get_raw_state().empty())
-            this->error_code_sensor->publish_state(data.Error.ErrorCode ? std::to_string(data.SourceAddress) + " " + std::to_string(data.Error.ErrorCode) : "");
+        {
+            if (!data.Error.ErrorCode)
+                this->error_code_sensor->publish_state("");
+            else
+                // TODO Replace with std::format when using ESP-IDF 5.2+
+                //this->error_code_sensor->publish_state(std::format("{:02d} {:02X}", data.SourceAddress, data.Error.ErrorCode));
+                this->error_code_sensor->publish_state((
+                    std::stringstream{} <<
+                    std::setfill('0') <<
+                    std::setw(2) <<
+                    data.SourceAddress <<
+                    ' ' <<
+                    std::uppercase <<
+                    std::hex <<
+                    std::setw(2) <<
+                    data.Error.ErrorCode
+                ).str());
+        }
     }
 }
 

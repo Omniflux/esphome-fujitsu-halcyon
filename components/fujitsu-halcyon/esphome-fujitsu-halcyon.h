@@ -53,6 +53,16 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         CustomButton* advance_vertical_louver_button = new CustomButton([this]() { this->controller->advance_vertical_louver(this->ignore_lock_); });
         CustomButton* advance_horizontal_louver_button = new CustomButton([this]() { this->controller->advance_horizontal_louver(this->ignore_lock_); });
         CustomSwitch* use_sensor_switch = new CustomSwitch([this](bool state) { return this->controller->use_sensor(state, this->ignore_lock_); });
+        CustomSwitch* zone_1_switch = new CustomSwitch([this](bool state) { return this->controller->set_zone(1, state, this->ignore_lock_); });
+        CustomSwitch* zone_2_switch = new CustomSwitch([this](bool state) { return this->controller->set_zone(2, state, this->ignore_lock_); });
+        CustomSwitch* zone_3_switch = new CustomSwitch([this](bool state) { return this->controller->set_zone(3, state, this->ignore_lock_); });
+        CustomSwitch* zone_4_switch = new CustomSwitch([this](bool state) { return this->controller->set_zone(4, state, this->ignore_lock_); });
+        CustomSwitch* zone_5_switch = new CustomSwitch([this](bool state) { return this->controller->set_zone(5, state, this->ignore_lock_); });
+        CustomSwitch* zone_6_switch = new CustomSwitch([this](bool state) { return this->controller->set_zone(6, state, this->ignore_lock_); });
+        CustomSwitch* zone_7_switch = new CustomSwitch([this](bool state) { return this->controller->set_zone(7, state, this->ignore_lock_); });
+        CustomSwitch* zone_8_switch = new CustomSwitch([this](bool state) { return this->controller->set_zone(8, state, this->ignore_lock_); });
+        CustomSwitch* zone_group_day_switch = new CustomSwitch([this](bool state) { return this->controller->set_zone_group_day(state, this->ignore_lock_); });
+        CustomSwitch* zone_group_night_switch = new CustomSwitch([this](bool state) { return this->controller->set_zone_group_night(state, this->ignore_lock_); });
 
         FujitsuHalcyonController(uart::IDFUARTComponent *parent, uint8_t controller_address) : uart::UARTDevice(parent), controller_address_(controller_address) {}
 
@@ -78,6 +88,7 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         fujitsu_halcyon_controller::Controller* controller;
 
         void update_from_device(const fujitsu_halcyon_controller::Config& data);
+        void update_from_device(const fujitsu_halcyon_controller::ZoneConfig& data);
         void update_from_device(const fujitsu_halcyon_controller::Packet& data);
         void update_from_controller(const uint8_t address, const fujitsu_halcyon_controller::Config& data);
 

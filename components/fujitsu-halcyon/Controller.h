@@ -55,9 +55,26 @@ namespace SettableFields {
     };
 };
 
+namespace ZoneSettableFields {
+    enum {
+        Zone1,
+        Zone2,
+        Zone3,
+        Zone4,
+        Zone5,
+        Zone6,
+        Zone7,
+        Zone8,
+        ZoneGroupDay,
+        ZoneGroupNight,
+        MAX
+    };
+};
+
 class Controller {
     using ConfigCallback = std::function<void(const Config&)>;
     using ErrorCallback  = std::function<void(const Packet&)>;
+    using ZoneConfigCallback = std::function<void(const ZoneConfig&)>;
     using ControllerConfigCallback = std::function<void(const uint8_t address, const Config&)>;
     using ReadBytesCallback  = std::function<void(uint8_t *data, size_t len)>;
     using WriteBytesCallback = std::function<void(const uint8_t *data, size_t len)>;
@@ -65,6 +82,7 @@ class Controller {
     struct Callbacks {
         ConfigCallback Config;
         ErrorCallback Error;
+        ZoneConfigCallback ZoneConfig;
         ControllerConfigCallback ControllerConfig;
         ReadBytesCallback ReadBytes;
         WriteBytesCallback WriteBytes;
@@ -78,6 +96,7 @@ class Controller {
         bool is_initialized() const { return this->initialization_stage == InitializationStageEnum::Complete; }
         void reinitialize() { this->initialization_stage = InitializationStageEnum::FeatureRequest; }
         const struct Features& get_features() const { return this->features; }
+        const struct ZoneFunction& get_zone_function() const { return this->zone_function; }
 
         void set_current_temperature(float temperature);
         bool set_enabled(bool enabled, bool ignore_lock = false);
@@ -88,6 +107,9 @@ class Controller {
         bool set_fan_speed(FanSpeedEnum fan_speed, bool ignore_lock = false);
         bool set_vertical_swing(bool swing_vertical, bool ignore_lock = false);
         bool set_horizontal_swing(bool swing_horizontal, bool ignore_lock = false);
+        bool set_zone(int zone_number, bool zone_active, bool ignore_lock = false);
+        bool set_zone_group_day(bool zone_group_active, bool ignore_lock = false);
+        bool set_zone_group_night(bool zone_group_active, bool ignore_lock = false);
         bool advance_vertical_louver(bool ignore_lock = false);
         bool advance_horizontal_louver(bool ignore_lock = false);
         bool use_sensor(bool use_sensor, bool ignore_lock = false);
@@ -110,7 +132,11 @@ class Controller {
         struct Features features = {};
         struct Config current_configuration = {};
         struct Config changed_configuration = {};
+        struct ZoneConfig current_zone_configuration = {};
+        struct ZoneConfig changed_zone_configuration = {};
+        struct ZoneFunction zone_function = {};
         std::bitset<SettableFields::MAX> configuration_changes;
+        std::bitset<ZoneSettableFields::MAX> zone_configuration_changes;
         bool last_error_flag = false; // TODO handle errors for multiple indoor units...multiple errors per IU?
 
         [[noreturn]] void uart_event_task();

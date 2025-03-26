@@ -19,7 +19,9 @@ enum class PacketTypeEnum : uint8_t {
     Error,
     Features,
     Function,
-    Status
+    Status,
+    ZoneConfig,
+    ZoneFunction
 };
 
 enum class FanSpeedEnum : uint8_t {
@@ -37,6 +39,8 @@ enum class ModeEnum : uint8_t {
     Heat,
     Auto
 };
+
+
 
 struct Config {
     struct {
@@ -119,6 +123,41 @@ struct Function {
 
 struct Status {};
 
+struct ZoneConfig {
+    struct {
+        bool Write;
+    } Controller;
+    
+    struct {
+        bool Zone1;
+        bool Zone2;
+        bool Zone3;
+        bool Zone4;
+        bool Zone5;
+        bool Zone6;
+        bool Zone7;
+        bool Zone8;
+    } ActiveZones;
+    
+    struct {
+        bool Day;
+        bool Night;
+    } ActiveZoneGroups;
+};
+
+struct ZoneFunction {
+    struct {
+        bool Zone1;
+        bool Zone2;
+        bool Zone3;
+        bool Zone4;
+        bool Zone5;
+        bool Zone6;
+        bool Zone7;
+        bool Zone8;
+    } EnabledZones;
+};
+
 struct ByteMaskShiftData {
     constexpr ByteMaskShiftData(uint8_t byte, uint8_t mask) : byte(byte), mask(mask), shift(std::countr_zero(mask)) {};
 
@@ -168,9 +207,11 @@ constexpr struct BMS {
 
         constexpr static auto FanSpeed                  = ByteMaskShiftData(3, 0b01110000);
         constexpr static auto Mode                      = ByteMaskShiftData(3, 0b00001110);
+        constexpr static auto Zones                     = ByteMaskShiftData(3, 0b11111111);
         constexpr static auto Enabled                   = ByteMaskShiftData(3, 0b00000001);
         constexpr static auto Economy                   = ByteMaskShiftData(4, 0b10000000);
         constexpr static auto TestRun                   = ByteMaskShiftData(4, 0b01000000);
+        constexpr static auto ZoneGroup                 = ByteMaskShiftData(4, 0b00011001);
         constexpr static auto Setpoint                  = ByteMaskShiftData(4, 0b00011111);
         constexpr static auto SwingHorizontal           = ByteMaskShiftData(5, 0b00010000);
         constexpr static auto SwingVertical             = ByteMaskShiftData(5, 0b00000100);
@@ -216,6 +257,42 @@ constexpr struct BMS {
     } Function {};
 
     constexpr static struct Status_ {} Status {};
+
+    constexpr static struct ZoneConfig_ {
+        constexpr static struct Controller_ {
+            constexpr static auto Write                 = ByteMaskShiftData(2, 0b00001000);
+        } Controller {};
+        constexpr static struct ActiveZones_ {
+            constexpr static auto Zone1                 = ByteMaskShiftData(3, 0b00000001);
+            constexpr static auto Zone2                 = ByteMaskShiftData(3, 0b00000010);
+            constexpr static auto Zone3                 = ByteMaskShiftData(3, 0b00000100);
+            constexpr static auto Zone4                 = ByteMaskShiftData(3, 0b00001000);
+            constexpr static auto Zone5                 = ByteMaskShiftData(3, 0b00010000);
+            constexpr static auto Zone6                 = ByteMaskShiftData(3, 0b00100000);
+            constexpr static auto Zone7                 = ByteMaskShiftData(3, 0b01000000);
+            constexpr static auto Zone8                 = ByteMaskShiftData(3, 0b10000000);
+        } ActiveZones {};
+
+        constexpr static struct ActiveZoneGroups_ {
+            constexpr static auto Day                   = ByteMaskShiftData(4, 0b00001000);
+            constexpr static auto Night                 = ByteMaskShiftData(4, 0b00010000);
+        } ActiveZoneGroups {};
+    } ZoneConfig {};
+
+    constexpr static struct ZoneFunction_ {
+        constexpr static struct EnabledZones_ {
+            constexpr static auto Common                = ByteMaskShiftData(2, 0b00001000);
+            constexpr static auto Zone1                 = ByteMaskShiftData(3, 0b00000001);
+            constexpr static auto Zone2                 = ByteMaskShiftData(3, 0b00000010);
+            constexpr static auto Zone3                 = ByteMaskShiftData(3, 0b00000100);
+            constexpr static auto Zone4                 = ByteMaskShiftData(3, 0b00001000);
+            constexpr static auto Zone5                 = ByteMaskShiftData(3, 0b00010000);
+            constexpr static auto Zone6                 = ByteMaskShiftData(3, 0b00100000);
+            constexpr static auto Zone7                 = ByteMaskShiftData(3, 0b01000000);
+            constexpr static auto Zone8                 = ByteMaskShiftData(3, 0b10000000);
+        } EnabledZones {};
+    } ZoneFunction {};
+
 } BMS;
 static_assert(BMS.Type.shift == 4 && BMS.Features.FanSpeed.Low.shift == 3, "Shift values calculated incorrectly");
 
@@ -241,6 +318,8 @@ class Packet {
         struct Function Function {};
         struct Features Features {};
         struct Status Status {};
+        struct ZoneConfig ZoneConfig {};
+        struct ZoneFunction ZoneFunction {};
 
         static void invert_buffer(Buffer& buffer) { *reinterpret_cast<uint64_t*>(buffer.data()) = ~*reinterpret_cast<uint64_t*>(buffer.data()); };
 };

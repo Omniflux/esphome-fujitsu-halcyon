@@ -97,6 +97,36 @@ Packet::Packet(Buffer buffer) {
 
         case PacketTypeEnum::Status:
             break;
+
+        case PacketTypeEnum::ZoneConfig:
+            if (this->SourceType == AddressTypeEnum::IndoorUnit) {
+                // We don't worry about checking if they are enabled as a feature as the payload is complete
+                this->ZoneConfig.ActiveZones.Zone1 = getField(BMS.ZoneConfig.ActiveZones.Zone1);
+                this->ZoneConfig.ActiveZones.Zone2 = getField(BMS.ZoneConfig.ActiveZones.Zone2);
+                this->ZoneConfig.ActiveZones.Zone3 = getField(BMS.ZoneConfig.ActiveZones.Zone3);
+                this->ZoneConfig.ActiveZones.Zone4 = getField(BMS.ZoneConfig.ActiveZones.Zone4);
+                this->ZoneConfig.ActiveZones.Zone5 = getField(BMS.ZoneConfig.ActiveZones.Zone5);
+                this->ZoneConfig.ActiveZones.Zone6 = getField(BMS.ZoneConfig.ActiveZones.Zone6);
+                this->ZoneConfig.ActiveZones.Zone7 = getField(BMS.ZoneConfig.ActiveZones.Zone7);
+                this->ZoneConfig.ActiveZones.Zone8 = getField(BMS.ZoneConfig.ActiveZones.Zone8);
+                
+                this->ZoneConfig.ActiveZoneGroups.Day = getField(BMS.ZoneConfig.ActiveZoneGroups.Day);
+                this->ZoneConfig.ActiveZoneGroups.Night = getField(BMS.ZoneConfig.ActiveZoneGroups.Night);
+            }
+            break;
+
+        case PacketTypeEnum::ZoneFunction: // Use for hints to setup traits automatically
+            if (this->SourceType == AddressTypeEnum::IndoorUnit) {
+                this->ZoneFunction.EnabledZones.Zone1 = getField(BMS.ZoneFunction.EnabledZones.Zone1);
+                this->ZoneFunction.EnabledZones.Zone2 = getField(BMS.ZoneFunction.EnabledZones.Zone2);
+                this->ZoneFunction.EnabledZones.Zone3 = getField(BMS.ZoneFunction.EnabledZones.Zone3);
+                this->ZoneFunction.EnabledZones.Zone4 = getField(BMS.ZoneFunction.EnabledZones.Zone4);
+                this->ZoneFunction.EnabledZones.Zone5 = getField(BMS.ZoneFunction.EnabledZones.Zone5);
+                this->ZoneFunction.EnabledZones.Zone6 = getField(BMS.ZoneFunction.EnabledZones.Zone6);
+                this->ZoneFunction.EnabledZones.Zone7 = getField(BMS.ZoneFunction.EnabledZones.Zone7);
+                this->ZoneFunction.EnabledZones.Zone8 = getField(BMS.ZoneFunction.EnabledZones.Zone8);
+            }
+            break;
     }
 };
 
@@ -200,6 +230,26 @@ Packet::Buffer Packet::to_buffer() const {
             break;
 
         case PacketTypeEnum::Status:
+            break;
+
+        case PacketTypeEnum::ZoneConfig:
+            if (SourceType == AddressTypeEnum::Controller)
+                setField(BMS.ZoneConfig.Controller.Write, this->ZoneConfig.Controller.Write);
+
+            setField(BMS.ZoneConfig.ActiveZones.Zone1, this->ZoneConfig.ActiveZones.Zone1);
+            setField(BMS.ZoneConfig.ActiveZones.Zone2, this->ZoneConfig.ActiveZones.Zone2);
+            setField(BMS.ZoneConfig.ActiveZones.Zone3, this->ZoneConfig.ActiveZones.Zone3);
+            setField(BMS.ZoneConfig.ActiveZones.Zone4, this->ZoneConfig.ActiveZones.Zone4);
+            setField(BMS.ZoneConfig.ActiveZones.Zone5, this->ZoneConfig.ActiveZones.Zone5);
+            setField(BMS.ZoneConfig.ActiveZones.Zone6, this->ZoneConfig.ActiveZones.Zone6);
+            setField(BMS.ZoneConfig.ActiveZones.Zone7, this->ZoneConfig.ActiveZones.Zone7);
+            setField(BMS.ZoneConfig.ActiveZones.Zone8, this->ZoneConfig.ActiveZones.Zone8);
+
+            setField(BMS.ZoneConfig.ActiveZoneGroups.Day, this->ZoneConfig.ActiveZoneGroups.Day);
+            setField(BMS.ZoneConfig.ActiveZoneGroups.Night, this->ZoneConfig.ActiveZoneGroups.Night);
+            break;
+
+        case PacketTypeEnum::ZoneFunction:
             break;
     }
 

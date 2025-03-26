@@ -24,7 +24,7 @@ from esphome.const import (
     UNIT_CELSIUS
 )
 
-CODEOWNERS = ["@Omniflux"]
+CODEOWNERS = ["@Omniflux", "@dymondj"]
 DEPENDENCIES = ["tzsp", "uart"]
 AUTO_LOAD = ["binary_sensor", "button", "climate", "sensor", "switch", "text_sensor", "tzsp"]
 
@@ -32,6 +32,14 @@ CONF_CONTROLLER_ADDRESS = "controller_address"
 CONF_TEMPERATURE_CONTROLLER_ADDRESS = "temperature_controller_address"
 CONF_TEMPERATURE_SENSOR = "temperature_sensor_id"
 CONF_USE_SENSOR = "use_sensor"
+CONF_ZONE_1 = "zone_1"
+CONF_ZONE_2 = "zone_2"
+CONF_ZONE_3 = "zone_3"
+CONF_ZONE_4 = "zone_4"
+CONF_ZONE_5 = "zone_5"
+CONF_ZONE_6 = "zone_6"
+CONF_ZONE_7 = "zone_7"
+CONF_ZONE_8 = "zone_8"
 CONF_IGNORE_LOCK = "ignore_lock"
 
 CONF_STANDBY_MODE = "standby_mode"
@@ -64,6 +72,38 @@ CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
             CustomSwitch,
             entity_category=ENTITY_CATEGORY_CONFIG,
             default_restore_mode="RESTORE_DEFAULT_OFF"
+        ),
+        cv.Optional(CONF_ZONE_1, default={CONF_NAME: "Zone 1", CONF_INTERNAL: True}): switch.switch_schema(
+            CustomSwitch,
+            default_restore_mode="RESTORE_DEFAULT_ON"
+        ),
+        cv.Optional(CONF_ZONE_2, default={CONF_NAME: "Zone 2", CONF_INTERNAL: True}): switch.switch_schema(
+            CustomSwitch,
+            default_restore_mode="RESTORE_DEFAULT_ON"
+        ),
+        cv.Optional(CONF_ZONE_3, default={CONF_NAME: "Zone 3", CONF_INTERNAL: True}): switch.switch_schema(
+            CustomSwitch,
+            default_restore_mode="RESTORE_DEFAULT_ON"
+        ),
+        cv.Optional(CONF_ZONE_4, default={CONF_NAME: "Zone 4", CONF_INTERNAL: True}): switch.switch_schema(
+            CustomSwitch,
+            default_restore_mode="RESTORE_DEFAULT_ON"
+        ),
+        cv.Optional(CONF_ZONE_5, default={CONF_NAME: "Zone 5", CONF_INTERNAL: True}): switch.switch_schema(
+            CustomSwitch,
+            default_restore_mode="RESTORE_DEFAULT_ON"
+        ),
+        cv.Optional(CONF_ZONE_6, default={CONF_NAME: "Zone 6", CONF_INTERNAL: True}): switch.switch_schema(
+            CustomSwitch,
+            default_restore_mode="RESTORE_DEFAULT_ON"
+        ),
+        cv.Optional(CONF_ZONE_7, default={CONF_NAME: "Zone 7", CONF_INTERNAL: True}): switch.switch_schema(
+            CustomSwitch,
+            default_restore_mode="RESTORE_DEFAULT_ON"
+        ),
+        cv.Optional(CONF_ZONE_8, default={CONF_NAME: "Zone 8", CONF_INTERNAL: True}): switch.switch_schema(
+            CustomSwitch,
+            default_restore_mode="RESTORE_DEFAULT_ON"
         ),
         cv.Optional(CONF_REMOTE_SENSOR, default={CONF_NAME: "Remote Temperature Sensor", CONF_INTERNAL: True}): sensor.sensor_schema(
             Sensor,
@@ -138,6 +178,30 @@ async def to_code(config):
 
     varx = cg.Pvariable(config[CONF_USE_SENSOR][CONF_ID], var.use_sensor_switch)
     await switch.register_switch(varx, config[CONF_USE_SENSOR])
+
+    varx = cg.Pvariable(config[CONF_ZONE_1][CONF_ID], var.zone_1_switch)
+    await switch.register_switch(varx, config[CONF_ZONE_1])
+
+    varx = cg.Pvariable(config[CONF_ZONE_2][CONF_ID], var.zone_2_switch)
+    await switch.register_switch(varx, config[CONF_ZONE_2])
+
+    varx = cg.Pvariable(config[CONF_ZONE_3][CONF_ID], var.zone_3_switch)
+    await switch.register_switch(varx, config[CONF_ZONE_3])
+
+    varx = cg.Pvariable(config[CONF_ZONE_4][CONF_ID], var.zone_4_switch)
+    await switch.register_switch(varx, config[CONF_ZONE_4])
+
+    varx = cg.Pvariable(config[CONF_ZONE_5][CONF_ID], var.zone_5_switch)
+    await switch.register_switch(varx, config[CONF_ZONE_5])
+
+    varx = cg.Pvariable(config[CONF_ZONE_6][CONF_ID], var.zone_6_switch)
+    await switch.register_switch(varx, config[CONF_ZONE_6])
+
+    varx = cg.Pvariable(config[CONF_ZONE_7][CONF_ID], var.zone_7_switch)
+    await switch.register_switch(varx, config[CONF_ZONE_7])
+
+    varx = cg.Pvariable(config[CONF_ZONE_8][CONF_ID], var.zone_8_switch)
+    await switch.register_switch(varx, config[CONF_ZONE_8])
 
     varx = cg.Pvariable(config[CONF_ADVANCE_VERTICAL_LOUVER][CONF_ID], var.advance_vertical_louver_button)
     await button.register_button(varx, config[CONF_ADVANCE_VERTICAL_LOUVER])

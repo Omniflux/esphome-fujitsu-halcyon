@@ -194,6 +194,15 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
                 break;
             case PacketTypeEnum::Status:
                 break;
+            case PacketTypeEnum::ZoneConfig:
+                this->current_zone_configuration = packet.ZoneConfig;
+
+                if (this->callbacks.ZoneConfig)
+                    deferred_callback = [this](){ this->callbacks.ZoneConfig(this->current_zone_configuration); };
+                break;
+            case PacketTypeEnum::ZoneFunction:
+                this->zone_function = packet.ZoneFunction;
+                break;
         }
     } else {
         switch (packet.Type) {
@@ -221,7 +230,45 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
         else if ((error_flag_changed && this->is_primary_controller()) ||
                  (packet.Type == PacketTypeEnum::Error && !this->is_primary_controller()))
             tx_packet.Type = PacketTypeEnum::Error;
-        else {
+        else if (this->zone_configuration_changes.any()) {
+            tx_packet.Type = PacketTypeEnum::ZoneConfig;
+            tx_packet.ZoneConfig = this->current_zone_configuration;
+            tx_packet.ZoneConfig.Controller.Write = true;
+
+            if (this->zone_configuration_changes[ZoneSettableFields::Zone1]) {
+                tx_packet.ZoneConfig.ActiveZones.Zone1 = this->changed_zone_configuration.ActiveZones.Zone1;
+            }
+            if (this->zone_configuration_changes[ZoneSettableFields::Zone2]) {
+                tx_packet.ZoneConfig.ActiveZones.Zone2 = this->changed_zone_configuration.ActiveZones.Zone2;
+            }
+            if (this->zone_configuration_changes[ZoneSettableFields::Zone3]) {
+                tx_packet.ZoneConfig.ActiveZones.Zone3 = this->changed_zone_configuration.ActiveZones.Zone3;
+            }
+            if (this->zone_configuration_changes[ZoneSettableFields::Zone4]) {
+                tx_packet.ZoneConfig.ActiveZones.Zone4 = this->changed_zone_configuration.ActiveZones.Zone4;
+            }
+            if (this->zone_configuration_changes[ZoneSettableFields::Zone5]) {
+                tx_packet.ZoneConfig.ActiveZones.Zone5 = this->changed_zone_configuration.ActiveZones.Zone5;
+            }
+            if (this->zone_configuration_changes[ZoneSettableFields::Zone6]) {
+                tx_packet.ZoneConfig.ActiveZones.Zone6 = this->changed_zone_configuration.ActiveZones.Zone6;
+            }
+            if (this->zone_configuration_changes[ZoneSettableFields::Zone7]) {
+                tx_packet.ZoneConfig.ActiveZones.Zone7 = this->changed_zone_configuration.ActiveZones.Zone7;
+            }
+            if (this->zone_configuration_changes[ZoneSettableFields::Zone8]) {
+                tx_packet.ZoneConfig.ActiveZones.Zone8 = this->changed_zone_configuration.ActiveZones.Zone8;
+            }
+
+            if (this->zone_configuration_changes[ZoneSettableFields::ZoneGroupDay]) {
+                tx_packet.ZoneConfig.ActiveZoneGroups.Day = this->changed_zone_configuration.ActiveZoneGroups.Day;
+            }
+            if (this->zone_configuration_changes[ZoneSettableFields::ZoneGroupNight]) {
+                tx_packet.ZoneConfig.ActiveZoneGroups.Night = this->changed_zone_configuration.ActiveZoneGroups.Night;
+            }
+
+            this->zone_configuration_changes.reset();
+        } else {
             // First CONFIG packet sent from Fujitsu controller has write flag set, but we do not restore state at this time
             tx_packet.Type = PacketTypeEnum::Config;
             tx_packet.Config = this->current_configuration;
@@ -435,6 +482,92 @@ bool Controller::set_horizontal_swing(bool swing_horizontal, bool ignore_lock) {
     this->changed_configuration.SwingHorizontal = swing_horizontal;
     this->configuration_changes[SettableFields::SwingHorizontal] = true;
     return true;
+}
+
+bool Controller::set_zone(int zone_number, bool zone_active, bool ignore_lock) {
+    if (!ignore_lock && this->current_configuration.IndoorUnit.Lock.All)
+        return false;
+
+    switch (zone_number) {
+        case 1:
+            if (!this->zone_function.EnabledZones.Zone1)
+                return false;
+
+            this->changed_zone_configuration.ActiveZones.Zone1 = zone_active;
+            this->zone_configuration_changes[ZoneSettableFields::Zone1] = true;
+            break;
+        case 2:
+            if (!this->zone_function.EnabledZones.Zone2)
+                return false;
+
+            this->changed_zone_configuration.ActiveZones.Zone2 = zone_active;
+            this->zone_configuration_changes[ZoneSettableFields::Zone2] = true;
+            break;
+        case 3:
+            if (!this->zone_function.EnabledZones.Zone3)
+                return false;
+
+            this->changed_zone_configuration.ActiveZones.Zone3 = zone_active;
+            this->zone_configuration_changes[ZoneSettableFields::Zone3] = true;
+            break;
+        case 4:
+            if (!this->zone_function.EnabledZones.Zone4)
+                return false;
+
+            this->changed_zone_configuration.ActiveZones.Zone4 = zone_active;
+            this->zone_configuration_changes[ZoneSettableFields::Zone4] = true;
+            break;
+        case 5:
+            if (!this->zone_function.EnabledZones.Zone5)
+                return false;
+
+            this->changed_zone_configuration.ActiveZones.Zone5 = zone_active;
+            this->zone_configuration_changes[ZoneSettableFields::Zone5] = true;
+            break;
+        case 6:
+            if (!this->zone_function.EnabledZones.Zone6)
+                return false;
+
+            this->changed_zone_configuration.ActiveZones.Zone6 = zone_active;
+            this->zone_configuration_changes[ZoneSettableFields::Zone6] = true;
+            break;
+        case 7:
+            if (!this->zone_function.EnabledZones.Zone7)
+                return false;
+
+            this->changed_zone_configuration.ActiveZones.Zone7 = zone_active;
+            this->zone_configuration_changes[ZoneSettableFields::Zone7] = true;
+            break;
+        case 8:
+            if (!this->zone_function.EnabledZones.Zone8)
+                return false;
+
+            this->changed_zone_configuration.ActiveZones.Zone8 = zone_active;
+            this->zone_configuration_changes[ZoneSettableFields::Zone8] = true;
+            break;
+    }
+
+    // Turn off zone_groups if we get a request for an individual zone change
+    this->changed_zone_configuration.ActiveZoneGroups.Day = false;
+    this->changed_zone_configuration.ActiveZoneGroups.Night = false;
+
+    this->zone_configuration_changes[ZoneSettableFields::ZoneGroupDay] = true;
+    this->zone_configuration_changes[ZoneSettableFields::ZoneGroupNight] = true;
+    return zone_active;
+}
+
+bool Controller::set_zone_group_day(bool zone_group_active, bool ignore_lock) {
+    if (!ignore_lock && this->current_configuration.IndoorUnit.Lock.All)
+        return false;
+    
+    return false;
+}
+
+bool Controller::set_zone_group_night(bool zone_group_active, bool ignore_lock) {
+    if (!ignore_lock && this->current_configuration.IndoorUnit.Lock.All)
+        return false;
+    
+    return false;
 }
 
 bool Controller::advance_vertical_louver(bool ignore_lock) {

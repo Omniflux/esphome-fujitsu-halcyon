@@ -72,13 +72,31 @@ void FujitsuHalcyonController::log_buffer(const char* dir, const uint8_t* buf, s
 }
 
 void FujitsuHalcyonController::dump_config() {
-    ESP_LOGCONFIG(TAG, "FujitsuHalcyonController:");
+    LOG_CLIMATE("", "FujitsuHalcyonController", this);
     ESP_LOGCONFIG(TAG, "  Controller Address: %u (%s)", this->controller_address_, ControllerName[std::clamp(static_cast<size_t>(this->controller_address_), 0u, ControllerName.size() - 1)]);
     ESP_LOGCONFIG(TAG, "  Remote Temperature Controller Address: %u (%s)", this->temperature_controller_address_, ControllerName[std::clamp(static_cast<size_t>(this->temperature_controller_address_), 0u, ControllerName.size() - 1)]);
     LOG_SENSOR("  ", "Remote Temperature Controller Sensor", this->remote_sensor);
     LOG_SENSOR("  ", "Temperature Sensor", this->temperature_sensor_);
-    ESP_LOGCONFIG(TAG, "  Use Sensor: %s", this->use_sensor_switch->state ? "YES" : "NO");
     ESP_LOGCONFIG(TAG, "  Ignore Lock: %s", this->ignore_lock_ ? "YES" : "NO");
+    ESP_LOGCONFIG(TAG, "  Standby Mode: %s", this->standby_sensor->state ? "ACTIVE" : "NORMAL");
+
+    if (this->controller->is_initialized()) {
+        auto features = this->controller->get_features();
+
+        ESP_LOGCONFIG(TAG, "  Additional Features:%s", features.FilterTimer || features.Maintenance || features.SensorSwitching ? "" : " NONE");
+        if (features.FilterTimer)
+            ESP_LOGCONFIG(TAG, "    - Filter Timer");
+        if (features.Maintenance)
+            ESP_LOGCONFIG(TAG, "    - Maintenance");
+        if (features.SensorSwitching)
+            ESP_LOGCONFIG(TAG, "    - Sensor Switching");
+    }
+
+    if (!this->filter_sensor->is_internal())
+        ESP_LOGCONFIG(TAG, "  Filter Timer: %s", this->filter_sensor->state ? "EXPIRED" : "OK");
+    if (!this->use_sensor_switch->is_internal())
+        ESP_LOGCONFIG(TAG, "  Use Temperature Sensor: %s", this->use_sensor_switch->state ? "YES" : "NO");
+
     LOG_TZSP("  ", this);
 
     this->check_uart_settings(
@@ -87,6 +105,8 @@ void FujitsuHalcyonController::dump_config() {
         this->uart_parity_to_uart_config_parity(fujitsu_halcyon_controller::UARTConfig.parity),
         this->uart_data_bits_to_uart_config_data_bits(fujitsu_halcyon_controller::UARTConfig.data_bits)
     );
+
+    this->dump_traits_(TAG);
 }
 
 climate::ClimateTraits FujitsuHalcyonController::traits() {

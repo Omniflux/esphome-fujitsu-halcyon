@@ -49,6 +49,15 @@ void FujitsuHalcyonController::setup() {
             this->controller->set_current_temperature(temperature);
         });
 
+    if (this->humidity_sensor_ != nullptr) {
+        this->humidity_sensor_->add_on_raw_state_callback([this](float state) {
+            this->current_humidity = state;
+            this->publish_state();
+        });
+
+        this->current_humidity = this->humidity_sensor_->state;
+    }
+
 /*
     // Not sure if should timeout, or wait forever.
     // Not sure if getting stuck at can_proceed() causes boot failure count to increment
@@ -77,6 +86,7 @@ void FujitsuHalcyonController::dump_config() {
     ESP_LOGCONFIG(TAG, "  Remote Temperature Controller Address: %u (%s)", this->temperature_controller_address_, ControllerName[std::clamp(static_cast<size_t>(this->temperature_controller_address_), 0u, ControllerName.size() - 1)]);
     LOG_SENSOR("  ", "Remote Temperature Controller Sensor", this->remote_sensor);
     LOG_SENSOR("  ", "Temperature Sensor", this->temperature_sensor_);
+    LOG_SENSOR("  ", "Humidity Sensor", this->humidity_sensor_);
     ESP_LOGCONFIG(TAG, "  Ignore Lock: %s", this->ignore_lock_ ? "YES" : "NO");
     ESP_LOGCONFIG(TAG, "  Standby Mode: %s", this->standby_sensor->state ? "ACTIVE" : "NORMAL");
 
@@ -123,6 +133,9 @@ climate::ClimateTraits FujitsuHalcyonController::traits() {
     // Current temperature
     if (this->temperature_sensor_ != nullptr || !this->remote_sensor->is_internal())
         traits.set_supports_current_temperature(true);
+
+    // Current humidity
+    traits.set_supports_current_humidity(this->humidity_sensor_ != nullptr);
 
     // Mode
     if (features.Mode.Auto)

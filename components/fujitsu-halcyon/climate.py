@@ -14,6 +14,7 @@ from esphome.components import (
 
 from esphome.const import (
     CONF_ID,
+    CONF_HUMIDITY_SENSOR,
     CONF_INTERNAL,
     CONF_NAME,
     DEVICE_CLASS_TEMPERATURE,
@@ -60,6 +61,7 @@ CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
         cv.Optional(CONF_TEMPERATURE_CONTROLLER_ADDRESS, default=0): cv.int_range(0, 15),
         cv.Optional(CONF_IGNORE_LOCK, default=False): cv.boolean,
         cv.Optional(CONF_TEMPERATURE_SENSOR): cv.use_id(sensor.Sensor),
+        cv.Optional(CONF_HUMIDITY_SENSOR): cv.use_id(sensor.Sensor),
         cv.Optional(CONF_USE_SENSOR, default={CONF_NAME: "Use Sensor", CONF_INTERNAL: True}): switch.switch_schema(
             CustomSwitch,
             entity_category=ENTITY_CATEGORY_CONFIG,
@@ -159,3 +161,6 @@ async def to_code(config):
 
     if CONF_TEMPERATURE_SENSOR in config:
         cg.add(var.set_temperature_sensor(await cg.get_variable(config[CONF_TEMPERATURE_SENSOR])))
+
+    if CONF_HUMIDITY_SENSOR in config:
+        cg.add(var.set_humidity_sensor(await cg.get_variable(config[CONF_HUMIDITY_SENSOR])))

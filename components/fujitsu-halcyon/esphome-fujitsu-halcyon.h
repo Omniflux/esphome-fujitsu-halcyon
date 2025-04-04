@@ -65,6 +65,7 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         climate::ClimateTraits traits() override;
 
         void set_ignore_lock(bool ignore_lock) { this->ignore_lock_ = ignore_lock; }
+        void set_humidity_sensor(sensor::Sensor* humidity_sensor) { this->humidity_sensor_ = humidity_sensor; }
         void set_temperature_sensor(sensor::Sensor* temperature_sensor) { this->temperature_sensor_ = temperature_sensor; }
         void set_temperature_controller_address(uint8_t temperature_controller_address) { this->temperature_controller_address_ = temperature_controller_address; }
 
@@ -72,6 +73,7 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         uint8_t controller_address_{};
         uint8_t temperature_controller_address_{};
         bool ignore_lock_{};
+        sensor::Sensor* humidity_sensor_{};
         sensor::Sensor* temperature_sensor_{};
 
     private:

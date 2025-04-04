@@ -1,19 +1,20 @@
 substitutions:
-  name: halcyon-controller
+  device_name: halcyon-controller
   friendly_name: Halcyon Controller
-  halcyon_name: My AC
-  esp_board: esp32-poe-iso
+  device_description: Atom Lite + FOSV
+  esp_board: m5stack-atom
+
+external_components:
+  - source: github://Omniflux/esphome-tzsp
+  - source: github://Omniflux/esphome-fujitsu-halcyon
 
 packages:
   wifi: !include common/wifi.yaml
 
-external_components:
-  - source: github://Omniflux/esphome-fujitsu-halcyon
-  - source: github://Omniflux/esphome-tzsp
-
 esphome:
-  name: ${name}
+  name: ${device_name}
   friendly_name: ${friendly_name}
+  comment: ${device_description}
 
 esp32:
   board: ${esp_board}
@@ -23,38 +24,43 @@ esp32:
 api:
 
 ota:
-  password: !secret ota_password
+  - platform: esphome
+    password: !secret ota_password
+
+#logger:
+#  level: DEBUG
+
+button:
+  - platform: restart
+    name: Restart
+  - platform: safe_mode
+    name: Restart (Safe Mode)
 
 sensor:
 - platform: uptime
   name: "Uptime"
 
-button:
-- platform: restart
-  name: Restart device
-- platform: safe_mode
-  name: Safe Mode Boot
-
-#logger:
-#  level: DEBUG
-
 uart:
-  tx_pin: GPIO13  # Device dependent
-  rx_pin: GPIO14  # Device dependent
+  tx_pin: GPIO22  # Device dependent
+  rx_pin: GPIO19  # Device dependent
   baud_rate: 500
   parity: EVEN
 
 climate:
 - platform: fujitsu-halcyon
-  name: ${halcyon_name}
+  name: None
+
   # Fujitsu devices use 0 and 1, but 2-15 should also work. Must not skip addresses
   controller_address: 1  # 0=Primary, 1=Secondary
   #temperature_controller_address: 0  # Fujitsu controller address to read temperature from
-  #temperature_sensor_id: my_temp_sensor  # ESPHome sensor to read temperature from
+
+  #temperature_sensor_id: my_temperature_sensor  # ESPHome sensor to read temperature from
+  #humidity_sensor: my_humidity_sensor  # ESPHome sensor to read humidity from
+
   #ignore_lock: true  # Ignore feature lock
 
   # To capture communications for debugging / analysis
   # Use Wireshark with https://github.com/Omniflux/fujitsu-airstage-h-dissector
-#  tzsp:
-#    ip: 192.168.1.20
-#    protocol: 255
+  #tzsp:
+  #  ip: 192.168.1.20
+  #  protocol: 255

@@ -3,7 +3,6 @@
 #include <array>
 #include <bit>
 #include <cstdint>
-#include <limits>
 
 namespace fujitsu_halcyon_controller {
 

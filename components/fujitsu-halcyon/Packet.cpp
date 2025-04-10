@@ -133,6 +133,9 @@ Packet::Buffer Packet::to_buffer() const {
                 setField(BMS.Config.IndoorUnit.Lock.ResetFilterTimer, this->Config.IndoorUnit.Lock.ResetFilterTimer);
 
                 setField(BMS.Config.IndoorUnit.FilterTimerExpired, this->Config.IndoorUnit.FilterTimerExpired);
+
+                buffer[5] |= 0b10100000; // Unknown bits set in all captured config packets from indoor unit
+                buffer[7] |= 0b00100000; // Unknown bit set in all captured config packets from indoor unit
             } else {
                 setField(BMS.Config.Controller.Write, this->Config.Controller.Write);
 
@@ -145,8 +148,7 @@ Packet::Buffer Packet::to_buffer() const {
                 setField(BMS.Config.Controller.ResetFilterTimer, this->Config.Controller.ResetFilterTimer);
 
                 if (this->SourceAddress != PrimaryControllerAddress)
-                    buffer[5] |= 0b00100000; // Unknown bit set in all captured packets from secondary controller
-
+                    buffer[5] |= 0b00100000; // Unknown bit set in all captured config packets from secondary controller
             }
 
             setField(BMS.Config.Mode, static_cast<uint8_t>(this->Config.Mode));
@@ -187,6 +189,8 @@ Packet::Buffer Packet::to_buffer() const {
 
                 setField(BMS.Features.VerticalLouvers, this->Features.VerticalLouvers);
                 setField(BMS.Features.HorizontalLouvers, this->Features.HorizontalLouvers);
+
+                buffer[6] |= 0b00000001; // Unknown bit set in all captured features packets from indoor unit
             }
             break;
 

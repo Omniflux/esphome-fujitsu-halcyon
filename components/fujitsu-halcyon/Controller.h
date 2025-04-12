@@ -31,7 +31,8 @@ constexpr float MaxTemperature = 60.0;
 
 enum class InitializationStageEnum : uint8_t {
     FeatureRequest,
-    FindNextController,
+    FindNextControllerTx,
+    FindNextControllerRx,
     Complete
 };
 

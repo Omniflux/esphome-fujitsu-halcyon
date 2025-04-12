@@ -153,10 +153,10 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
     Packet packet(buffer);
 
     // Finish initialization
-    if (this->initialization_stage == InitializationStageEnum::FindNextController) {
-        // Controller with address > configured found
-        if (packet.SourceType == AddressTypeEnum::Controller && packet.SourceAddress > this->controller_address)
-            this->next_token_destination_type = AddressTypeEnum::Controller;
+    if (this->initialization_stage == InitializationStageEnum::FindNextControllerRx) {
+        // Controller with address > configured did not transmit
+        if (packet.SourceType != AddressTypeEnum::Controller)
+            this->next_token_destination_type = AddressTypeEnum::IndoorUnit;
 
         // Fujitsu RC1 checks for next controller twice (in case of slow booting controller?), but we are only checking once
         this->initialization_stage = InitializationStageEnum::Complete;
@@ -187,7 +187,7 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
 
             case PacketTypeEnum::Features:
                 this->features = packet.Features;
-                this->initialization_stage = InitializationStageEnum::FindNextController;
+                this->initialization_stage = InitializationStageEnum::FindNextControllerTx;
                 break;
 
             case PacketTypeEnum::Function:
@@ -212,6 +212,12 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
         Packet tx_packet;
         tx_packet.SourceType = AddressTypeEnum::Controller;
         tx_packet.SourceAddress = this->controller_address;
+
+        if (this->initialization_stage == InitializationStageEnum::FindNextControllerTx) {
+            this->next_token_destination_type = AddressTypeEnum::Controller;
+            this->initialization_stage = InitializationStageEnum::FindNextControllerRx;
+        }
+
         // Next dest is always IU1 if tx packet is FUNCTION, but we have no support for tx FUNCTION at this time
         tx_packet.TokenDestinationType = this->next_token_destination_type;
         tx_packet.TokenDestinationAddress = this->next_token_destination_type == AddressTypeEnum::Controller ? this->controller_address + 1 : 1;

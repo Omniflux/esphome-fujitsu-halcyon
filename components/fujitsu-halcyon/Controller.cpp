@@ -228,7 +228,49 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
             tx_packet.Config.Controller.Temperature = this->changed_configuration.Controller.Temperature;
             tx_packet.Config.Controller.UseControllerSensor = this->changed_configuration.Controller.UseControllerSensor;
 
+            // Only set write flag if there are actual changes to write
+            bool has_actual_changes = false;
             if (this->configuration_changes.any()) {
+                // Check if any of the changes are different from current values
+                if (this->configuration_changes[SettableFields::Enabled] && 
+                    this->changed_configuration.Enabled != this->current_configuration.Enabled)
+                    has_actual_changes = true;
+                if (this->configuration_changes[SettableFields::Economy] && 
+                    this->changed_configuration.Economy != this->current_configuration.Economy)
+                    has_actual_changes = true;
+                if (this->configuration_changes[SettableFields::Setpoint] && 
+                    this->changed_configuration.Setpoint != this->current_configuration.Setpoint)
+                    has_actual_changes = true;
+                if (this->configuration_changes[SettableFields::TestRun] && 
+                    this->changed_configuration.TestRun != this->current_configuration.TestRun)
+                    has_actual_changes = true;
+                if (this->configuration_changes[SettableFields::Mode] && 
+                    this->changed_configuration.Mode != this->current_configuration.Mode)
+                    has_actual_changes = true;
+                if (this->configuration_changes[SettableFields::FanSpeed] && 
+                    this->changed_configuration.FanSpeed != this->current_configuration.FanSpeed)
+                    has_actual_changes = true;
+                if (this->configuration_changes[SettableFields::SwingVertical] && 
+                    this->changed_configuration.SwingVertical != this->current_configuration.SwingVertical)
+                    has_actual_changes = true;
+                if (this->configuration_changes[SettableFields::SwingHorizontal] && 
+                    this->changed_configuration.SwingHorizontal != this->current_configuration.SwingHorizontal)
+                    has_actual_changes = true;
+                if (this->configuration_changes[SettableFields::AdvanceVerticalLouver] && 
+                    this->changed_configuration.Controller.AdvanceVerticalLouver)
+                    has_actual_changes = true;
+                if (this->configuration_changes[SettableFields::AdvanceHorizontalLouver] && 
+                    this->changed_configuration.Controller.AdvanceHorizontalLouver)
+                    has_actual_changes = true;
+                if (this->configuration_changes[SettableFields::ResetFilterTimer] && 
+                    this->changed_configuration.Controller.ResetFilterTimer)
+                    has_actual_changes = true;
+                if (this->configuration_changes[SettableFields::Maintenance] && 
+                    this->changed_configuration.Controller.Maintenance)
+                    has_actual_changes = true;
+            }
+
+            if (has_actual_changes) {
                 tx_packet.Config.Controller.Write = true;
 
                 // Overwrite fields received from Indoor Unit

@@ -79,7 +79,7 @@ void Controller::uart_event_task() {
                     uart_get_buffered_data_len(this->uart_num, &buffer_len);
                     if (auto discard = buffer_len % buffer.size()) {
                         this->uart_read_bytes(buffer.data(), discard);
-                        ESP_LOGD(TAG, "Discarded %d bytes", discard);
+                        ESP_LOGW(TAG, "Discarded %d bytes", discard);
                     }
 
                     // For each frame
@@ -99,7 +99,7 @@ void Controller::uart_event_task() {
                 case UART_BUFFER_FULL:
                     // Something went wrong - don't try to catch up,
                     // just discard all pending data and start over
-                    ESP_LOGD(TAG, "UART ring buffer full!");
+                    ESP_LOGW(TAG, "UART ring buffer full!");
                     uart_flush_input(this->uart_num);
                     xQueueReset(this->uart_event_queue);
                     break;
@@ -107,24 +107,21 @@ void Controller::uart_event_task() {
                 case UART_FIFO_OVF:
                     // Something went wrong - don't try to catch up,
                     // just discard all pending data and start over
-                    ESP_LOGD(TAG, "UART FIFO Overflow!");
+                    ESP_LOGW(TAG, "UART FIFO Overflow!");
                     uart_flush_input(this->uart_num);
                     xQueueReset(this->uart_event_queue);
                     break;
 
                 case UART_PARITY_ERR:
-                    // Don't do anything, just log for debugging
-                    ESP_LOGD(TAG, "UART parity error");
+                    ESP_LOGW(TAG, "UART parity error");
                     break;
 
                 case UART_FRAME_ERR:
-                    // Don't do anything, just log for debugging
-                    ESP_LOGD(TAG, "UART frame error");
+                    ESP_LOGW(TAG, "UART frame error");
                     break;
 
                 default:
-                    // Don't do anything, just log for debugging
-                    ESP_LOGD(TAG, "Unhandled UART event type: %d", event.type);
+                    ESP_LOGW(TAG, "Unhandled UART event type: %d", event.type);
                     break;
             }
         }   

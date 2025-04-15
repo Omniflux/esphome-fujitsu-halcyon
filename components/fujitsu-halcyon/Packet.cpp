@@ -83,6 +83,8 @@ Packet::Packet(Buffer buffer) {
 
                 this->Features.VerticalLouvers = getField(BMS.Features.VerticalLouvers);
                 this->Features.HorizontalLouvers = getField(BMS.Features.HorizontalLouvers);
+
+                this->Features.Zones = getField(BMS.Features.Zones);
             }
             break;
 
@@ -97,6 +99,33 @@ Packet::Packet(Buffer buffer) {
 
         case PacketTypeEnum::Status:
             break;
+
+        case PacketTypeEnum::ZoneConfig:
+            if (this->SourceType == AddressTypeEnum::Controller)
+                this->ZoneConfig.Controller.Write = getField(BMS.ZoneConfig.Controller.Write);
+
+            this->ZoneConfig.ActiveZones = getField(BMS.ZoneConfig.ActiveZones);
+            this->ZoneConfig.ActiveZoneGroups.Day = getField(BMS.ZoneConfig.ActiveZoneGroups.Day);
+            this->ZoneConfig.ActiveZoneGroups.Night = getField(BMS.ZoneConfig.ActiveZoneGroups.Night);
+
+            this->ZoneConfig.ZoneGroupAssociations.Day =
+                this->extract_bits(getField(BMS.ZoneConfig.ZoneGroupAssociations5_8), true) << 4 |
+                this->extract_bits(getField(BMS.ZoneConfig.ZoneGroupAssociations1_4), true);
+            this->ZoneConfig.ZoneGroupAssociations.Night =
+                this->extract_bits(getField(BMS.ZoneConfig.ZoneGroupAssociations5_8), false) << 4 |
+                this->extract_bits(getField(BMS.ZoneConfig.ZoneGroupAssociations1_4), false);
+            break;
+
+        case PacketTypeEnum::ZoneFunction:
+            if (this->SourceType == AddressTypeEnum::IndoorUnit) {
+                this->ZoneFunction.IndoorUnit.ZoneCommon = getField(BMS.ZoneFunction.IndoorUnit.ZoneCommon);
+                this->ZoneFunction.IndoorUnit.EnabledZones = getField(BMS.ZoneFunction.IndoorUnit.EnabledZones);
+            } else
+                this->ZoneFunction.Controller.Write = getField(BMS.ZoneFunction.Controller.Write);
+
+            this->ZoneFunction.Function = getField(BMS.ZoneFunction.Function);
+            this->ZoneFunction.Value = getField(BMS.ZoneFunction.Value);
+        break;
     }
 };
 
@@ -190,6 +219,8 @@ Packet::Buffer Packet::to_buffer() const {
                 setField(BMS.Features.VerticalLouvers, this->Features.VerticalLouvers);
                 setField(BMS.Features.HorizontalLouvers, this->Features.HorizontalLouvers);
 
+                setField(BMS.Features.Zones, this->Features.Zones);
+
                 buffer[6] |= 0b00000001; // Unknown bit set in all captured features packets from indoor unit
             }
             break;
@@ -204,6 +235,39 @@ Packet::Buffer Packet::to_buffer() const {
             break;
 
         case PacketTypeEnum::Status:
+            break;
+
+        case PacketTypeEnum::ZoneConfig:
+            if (SourceType == AddressTypeEnum::Controller) {
+                setField(BMS.ZoneConfig.Controller.Write, this->ZoneConfig.Controller.Write);
+
+                buffer[4] |= 0b10000000; // Unknown bit set in all captured zoneconfig packets from controller
+            }
+
+            setField(BMS.ZoneConfig.ActiveZones, this->ZoneConfig.ActiveZones.to_ulong());
+            setField(BMS.ZoneConfig.ActiveZoneGroups.Day, this->ZoneConfig.ActiveZoneGroups.Day);
+            setField(BMS.ZoneConfig.ActiveZoneGroups.Night, this->ZoneConfig.ActiveZoneGroups.Night);
+
+            setField(BMS.ZoneConfig.ZoneGroupAssociations1_4,
+                this->interleave_bits(static_cast<uint8_t>(this->ZoneConfig.ZoneGroupAssociations.Day.to_ulong()), true) |
+                this->interleave_bits(static_cast<uint8_t>(this->ZoneConfig.ZoneGroupAssociations.Night.to_ulong()), false));
+
+            setField(BMS.ZoneConfig.ZoneGroupAssociations5_8,
+                this->interleave_bits(static_cast<uint8_t>(this->ZoneConfig.ZoneGroupAssociations.Day.to_ulong() >> 4), true) |
+                this->interleave_bits(static_cast<uint8_t>(this->ZoneConfig.ZoneGroupAssociations.Night.to_ulong() >> 4), false));
+
+            buffer[7] |= 0b01000000; // Unknown bit set in all captured zoneconfig packets
+            break;
+
+        case PacketTypeEnum::ZoneFunction:
+            if (SourceType == AddressTypeEnum::IndoorUnit) {
+                setField(BMS.ZoneFunction.IndoorUnit.ZoneCommon, this->ZoneFunction.IndoorUnit.ZoneCommon);
+                setField(BMS.ZoneFunction.IndoorUnit.EnabledZones, this->ZoneFunction.IndoorUnit.EnabledZones.to_ulong());
+            } else
+                setField(BMS.ZoneFunction.Controller.Write, this->ZoneFunction.Controller.Write);
+
+            setField(BMS.ZoneFunction.Function, this->ZoneFunction.Function);
+            setField(BMS.ZoneFunction.Value, this->ZoneFunction.Value);
             break;
     }
 

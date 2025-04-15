@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <functional>
 #include <memory>
 
@@ -54,6 +55,18 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         CustomButton* advance_horizontal_louver_button = new CustomButton([this]() { this->controller->advance_horizontal_louver(this->ignore_lock_); });
         CustomSwitch* use_sensor_switch = new CustomSwitch([this](bool state) { return this->controller->use_sensor(state, this->ignore_lock_); });
 
+        std::array<CustomSwitch*, fujitsu_halcyon_controller::MaximumZones> zone_switches = [this] {
+            std::array<CustomSwitch*, fujitsu_halcyon_controller::MaximumZones> switches;
+
+            for (auto i = 0; i < switches.size(); i++)
+                switches[i] = new CustomSwitch([this, i](bool state) { return this->controller->set_zone(i, state, this->ignore_lock_); });
+
+            return switches;
+        }();
+
+        CustomSwitch* zone_group_day_switch = new CustomSwitch([this](bool state) { return this->controller->set_zone_group_day(state, this->ignore_lock_); });
+        CustomSwitch* zone_group_night_switch = new CustomSwitch([this](bool state) { return this->controller->set_zone_group_night(state, this->ignore_lock_); });
+
         FujitsuHalcyonController(uart::IDFUARTComponent *parent, uint8_t controller_address) : uart::UARTDevice(parent), controller_address_(controller_address) {}
 
         void setup() override;
@@ -80,6 +93,7 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         fujitsu_halcyon_controller::Controller* controller;
 
         void update_from_device(const fujitsu_halcyon_controller::Config& data);
+        void update_from_device(const fujitsu_halcyon_controller::ZoneConfig& data);
         void update_from_device(const fujitsu_halcyon_controller::Packet& data);
         void update_from_controller(const uint8_t address, const fujitsu_halcyon_controller::Config& data);
 

@@ -156,7 +156,7 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
             this->next_token_destination_type = AddressTypeEnum::IndoorUnit;
 
         // Fujitsu RC1 checks for next controller twice (in case of slow booting controller?), but we are only checking once
-        this->initialization_stage = InitializationStageEnum::Complete;
+        this->initialization_stage = this->features.Zones ? InitializationStageEnum::ZoneRequestActive : InitializationStageEnum::Complete;
     }
 
     // Process packets from Indoor Units
@@ -184,12 +184,29 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
 
             case PacketTypeEnum::Features:
                 this->features = packet.Features;
-                this->initialization_stage = InitializationStageEnum::FindNextControllerTx;
+                this->initialization_stage = this->features.Zones ? InitializationStageEnum::ZoneRequestEnabled : InitializationStageEnum::FindNextControllerTx;
                 break;
 
             case PacketTypeEnum::Function:
                 break;
             case PacketTypeEnum::Status:
+                break;
+
+            case PacketTypeEnum::ZoneConfig:
+                this->current_zone_configuration = packet.ZoneConfig;
+
+                if (this->initialization_stage == InitializationStageEnum::ZoneRequestActive)
+                    this->initialization_stage = InitializationStageEnum::Complete;
+
+                if (this->callbacks.ZoneConfig)
+                    deferred_callback = [&](){ this->callbacks.ZoneConfig(this->current_zone_configuration); };
+                break;
+
+            case PacketTypeEnum::ZoneFunction:
+                this->zones = packet.ZoneFunction.IndoorUnit;
+
+                if (this->initialization_stage == InitializationStageEnum::ZoneRequestEnabled)
+                    this->initialization_stage = InitializationStageEnum::FindNextControllerTx;
                 break;
         }
     } else {
@@ -221,10 +238,30 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
 
         if (this->initialization_stage == InitializationStageEnum::FeatureRequest)
             tx_packet.Type = PacketTypeEnum::Features;
+        else if (this->initialization_stage == InitializationStageEnum::ZoneRequestEnabled)
+            tx_packet.Type = PacketTypeEnum::ZoneFunction;
+        else if (this->initialization_stage == InitializationStageEnum::ZoneRequestActive)
+            tx_packet.Type = PacketTypeEnum::ZoneConfig;
         else if ((error_flag_changed && this->is_primary_controller()) ||
                  (packet.Type == PacketTypeEnum::Error && !this->is_primary_controller()))
             tx_packet.Type = PacketTypeEnum::Error;
-        else {
+        else if (this->zone_configuration_changes.any()) {
+                tx_packet.Type = PacketTypeEnum::ZoneConfig;
+                tx_packet.ZoneConfig = this->current_zone_configuration;
+                tx_packet.ZoneConfig.Controller.Write = true;
+
+                for (size_t i = ZoneSettableFields::Zone1Active; i <= ZoneSettableFields::Zone8Active; i++)
+                    if (this->zone_configuration_changes[i])
+                        tx_packet.ZoneConfig.ActiveZones[i] = this->changed_zone_configuration.ActiveZones[i];
+
+                if (this->zone_configuration_changes[ZoneSettableFields::ZoneGroupDayActive])
+                    tx_packet.ZoneConfig.ActiveZoneGroups.Day = this->changed_zone_configuration.ActiveZoneGroups.Day;
+
+                if (this->zone_configuration_changes[ZoneSettableFields::ZoneGroupNightActive])
+                    tx_packet.ZoneConfig.ActiveZoneGroups.Night = this->changed_zone_configuration.ActiveZoneGroups.Night;
+
+                this->zone_configuration_changes.reset();
+        } else {
             // First CONFIG packet sent from Fujitsu controller has write flag set, but we do not restore state at this time
             tx_packet.Type = PacketTypeEnum::Config;
             tx_packet.Config = this->current_configuration;
@@ -497,6 +534,46 @@ bool Controller::maintenance(bool ignore_lock) {
 
     this->changed_configuration.Controller.Maintenance = true;
     this->configuration_changes[SettableFields::Maintenance] = true;
+    return true;
+}
+
+bool Controller::set_zone(uint8_t zone, bool active, bool ignore_lock) {
+    if (!ignore_lock && this->current_configuration.IndoorUnit.Lock.All)
+        return false;
+
+    if (!this->zones.EnabledZones.test(zone))
+        return false;
+
+    // Ensure at least one outlet is open
+    if (!active && !this->zones.ZoneCommon &&
+        this->changed_zone_configuration.ActiveZones.count() == 1 &&
+        this->changed_zone_configuration.ActiveZones.test(zone))
+        return false;
+
+    // Invalidate active zone groups
+    this->set_zone_group_day(false, true);
+    this->set_zone_group_night(false, true);
+
+    this->changed_zone_configuration.ActiveZones[zone] = active;
+    this->zone_configuration_changes[zone] = true;
+    return true;
+}
+
+bool Controller::set_zone_group_day(bool active, bool ignore_lock) {
+    if (!ignore_lock && this->current_configuration.IndoorUnit.Lock.All)
+        return false;
+
+    this->changed_zone_configuration.ActiveZoneGroups.Day = active;
+    this->zone_configuration_changes[ZoneSettableFields::ZoneGroupDayActive] = true;
+    return true;
+}
+
+bool Controller::set_zone_group_night(bool active, bool ignore_lock) {
+    if (!ignore_lock && this->current_configuration.IndoorUnit.Lock.All)
+        return false;
+
+    this->changed_zone_configuration.ActiveZoneGroups.Night = active;
+    this->zone_configuration_changes[ZoneSettableFields::ZoneGroupNightActive] = true;
     return true;
 }
 

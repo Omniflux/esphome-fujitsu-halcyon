@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "Packet.h"
 
 namespace fujitsu_halcyon_controller {
@@ -39,7 +41,8 @@ Packet::Packet(Buffer buffer) {
                 this->Config.Controller.AdvanceVerticalLouver = getField(BMS.Config.Controller.AdvanceVerticalLouver);
                 this->Config.Controller.AdvanceHorizontalLouver = getField(BMS.Config.Controller.AdvanceHorizontalLouver);
 
-                this->Config.Controller.Temperature = getField(BMS.Config.Controller.Temperature);
+                auto temperature = getField(BMS.Config.Controller.Temperature);
+                this->Config.Controller.Temperature = (temperature >> 1) + (temperature & 1) / 2.0;
                 this->Config.Controller.UseControllerSensor = getField(BMS.Config.Controller.UseControllerSensor);
 
                 this->Config.Controller.Maintenance = getField(BMS.Config.Controller.Maintenance);
@@ -142,7 +145,11 @@ Packet::Buffer Packet::to_buffer() const {
                 setField(BMS.Config.Controller.AdvanceVerticalLouver, this->Config.Controller.AdvanceVerticalLouver);
                 setField(BMS.Config.Controller.AdvanceHorizontalLouver, this->Config.Controller.AdvanceHorizontalLouver);
 
-                setField(BMS.Config.Controller.Temperature, this->Config.Controller.Temperature);
+                setField(BMS.Config.Controller.Temperature,
+                    (int(this->Config.Controller.Temperature) << 1) +
+                    int(std::fmod(std::round(this->Config.Controller.Temperature * 2), 2))
+                );
+
                 setField(BMS.Config.Controller.UseControllerSensor, this->Config.Controller.UseControllerSensor);
                 setField(BMS.Config.Controller.Maintenance, this->Config.Controller.Maintenance);
                 setField(BMS.Config.Controller.ResetFilterTimer, this->Config.Controller.ResetFilterTimer);

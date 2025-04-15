@@ -58,7 +58,7 @@ struct Config {
     } IndoorUnit;
 
     struct {
-        uint8_t Temperature;
+        float Temperature;
         bool Write;
         bool UseControllerSensor;
         bool AdvanceHorizontalLouver;
@@ -160,7 +160,7 @@ constexpr struct BMS {
             constexpr static auto UseControllerSensor     = ByteMaskShiftData(5, 0b10000000);
             constexpr static auto AdvanceHorizontalLouver = ByteMaskShiftData(5, 0b00001000);
             constexpr static auto AdvanceVerticalLouver   = ByteMaskShiftData(5, 0b00000010);
-            constexpr static auto Temperature             = ByteMaskShiftData(6, 0b01111110);
+            constexpr static auto Temperature             = ByteMaskShiftData(6, 0b01111111);
             constexpr static auto ResetFilterTimer        = ByteMaskShiftData(7, 0b01000000);
             constexpr static auto Maintenance             = ByteMaskShiftData(7, 0b00100000);
         } Controller = {};

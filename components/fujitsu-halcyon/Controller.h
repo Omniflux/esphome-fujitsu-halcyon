@@ -48,7 +48,6 @@ namespace SettableFields {
         SwingHorizontal,
         AdvanceVerticalLouver,
         AdvanceHorizontalLouver,
-        UseControllerSensor,
         ResetFilterTimer,
         Maintenance,
         MAX

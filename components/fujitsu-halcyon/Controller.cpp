@@ -302,6 +302,7 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
 
 void Controller::set_current_temperature(float temperature) {
     this->changed_configuration.Controller.Temperature = std::clamp(std::isfinite(temperature) ? temperature : 0, MinTemperature, MaxTemperature);
+    // Do not set configuration_changed flag - does not require write bit set
 }
 
 bool Controller::set_enabled(bool enabled, bool ignore_lock) {
@@ -471,7 +472,7 @@ bool Controller::use_sensor(bool use_sensor, bool ignore_lock) {
         return false;
 
     this->changed_configuration.Controller.UseControllerSensor = use_sensor;
-    this->configuration_changes[SettableFields::UseControllerSensor] = true;
+    // Do not set configuration_changed flag - does not require write bit set
     return true;
 }
 

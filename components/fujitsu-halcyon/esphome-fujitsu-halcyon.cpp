@@ -220,10 +220,14 @@ climate::ClimateTraits FujitsuHalcyonController::traits() {
     }
 
     // Zones
-    if (features.Zones)
+    if (features.Zones) {
         for (auto i = 0; i < this->zone_switches.size(); i++)
             if (zones.EnabledZones.test(i))
                 this->zone_switches[i]->set_internal(false);
+
+        this->zone_group_day_switch->set_internal(false);
+        this->zone_group_night_switch->set_internal(false);
+    }
 
     this->reinitialize_button->set_internal(false);
 

@@ -302,7 +302,6 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
 
 void Controller::set_current_temperature(float temperature) {
     this->changed_configuration.Controller.Temperature = std::clamp(std::isfinite(temperature) ? temperature : 0, MinTemperature, MaxTemperature);
-    this->configuration_changes[SettableFields::Temperature] = true;
 }
 
 bool Controller::set_enabled(bool enabled, bool ignore_lock) {

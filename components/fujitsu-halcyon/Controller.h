@@ -38,7 +38,6 @@ enum class InitializationStageEnum : uint8_t {
 
 namespace SettableFields {
     enum {
-        Temperature,
         Enabled,
         Economy,
         TestRun,

@@ -2,6 +2,7 @@
 
 #include <bitset>
 #include <functional>
+#include <queue>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
@@ -57,6 +58,7 @@ namespace SettableFields {
 class Controller {
     using ConfigCallback = std::function<void(const Config&)>;
     using ErrorCallback  = std::function<void(const Packet&)>;
+    using FunctionCallback = std::function<void(const Function&)>;
     using ControllerConfigCallback = std::function<void(const uint8_t address, const Config&)>;
     using ReadBytesCallback  = std::function<void(uint8_t *data, size_t len)>;
     using WriteBytesCallback = std::function<void(const uint8_t *data, size_t len)>;
@@ -64,6 +66,7 @@ class Controller {
     struct Callbacks {
         ConfigCallback Config;
         ErrorCallback Error;
+        FunctionCallback Function;
         ControllerConfigCallback ControllerConfig;
         ReadBytesCallback ReadBytes;
         WriteBytesCallback WriteBytes;
@@ -93,6 +96,9 @@ class Controller {
         bool reset_filter(bool ignore_lock = false);
         bool maintenance(bool ignore_lock = false);
 
+        void get_function(uint8_t function, uint8_t unit) { this->function_queue.push({ .Function = function, .Unit = unit }); }
+        void set_function(uint8_t function, uint8_t value, uint8_t unit) { this->function_queue.push({ true, function, value, unit }); }
+
     protected:
         InitializationStageEnum initialization_stage = InitializationStageEnum::FeatureRequest;
         AddressTypeEnum next_token_destination_type = AddressTypeEnum::IndoorUnit;
@@ -110,6 +116,7 @@ class Controller {
         struct Config current_configuration = {};
         struct Config changed_configuration = {};
         std::bitset<SettableFields::MAX> configuration_changes;
+        std::queue<struct Function> function_queue;
         bool last_error_flag = false; // TODO handle errors for multiple indoor units...multiple errors per IU?
 
         [[noreturn]] void uart_event_task();

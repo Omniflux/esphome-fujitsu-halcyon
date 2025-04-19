@@ -5,6 +5,7 @@ from esphome.components import (
     binary_sensor,
     button,
     climate,
+    number,
     sensor,
     switch,
     text_sensor,
@@ -14,8 +15,10 @@ from esphome.components import (
 
 from esphome.const import (
     CONF_ID,
+    CONF_DISABLED_BY_DEFAULT,
     CONF_HUMIDITY_SENSOR,
     CONF_INTERNAL,
+    CONF_MODE,
     CONF_NAME,
     DEVICE_CLASS_TEMPERATURE,
     DEVICE_CLASS_PROBLEM,
@@ -27,7 +30,7 @@ from esphome.const import (
 
 CODEOWNERS = ["@Omniflux"]
 DEPENDENCIES = ["tzsp", "uart"]
-AUTO_LOAD = ["binary_sensor", "button", "climate", "sensor", "switch", "text_sensor", "tzsp"]
+AUTO_LOAD = ["binary_sensor", "button", "climate", "number", "sensor", "switch", "text_sensor", "tzsp"]
 
 CONF_CONTROLLER_ADDRESS = "controller_address"
 CONF_TEMPERATURE_CONTROLLER_ADDRESS = "temperature_controller_address"
@@ -45,12 +48,19 @@ CONF_RESET_FILTER_TIMER = "reset_filter_timer"
 CONF_FILTER_TIMER_EXPIRED = "filter_timer_expired"
 CONF_REINITIALIZE = "reinitialize"
 
+CONF_FUNCTION = "function"
+CONF_FUNCTION_VALUE = "function_value"
+CONF_FUNCTION_UNIT = "function_unit"
+CONF_GET_FUNCTION = "get_function"
+CONF_SET_FUNCTION = "set_function"
+
 BinarySensor = cg.esphome_ns.class_("BinarySensor", cg.Component, binary_sensor.BinarySensor)
 TextSensor = cg.esphome_ns.class_("TextSensor", cg.Component, text_sensor.TextSensor)
 Sensor = cg.esphome_ns.class_("Sensor", cg.Component, sensor.Sensor)
 
 fujitsu_halcyon_ns = cg.esphome_ns.namespace("fujitsu_halcyon")
 CustomButton = fujitsu_halcyon_ns.class_("CustomButton", cg.Component, button.Button)
+CustomNumber = fujitsu_halcyon_ns.class_("CustomNumber", cg.Component, number.Number)
 CustomSwitch = fujitsu_halcyon_ns.class_("CustomSwitch", cg.Component, switch.Switch)
 FujitsuHalcyonController = fujitsu_halcyon_ns.class_("FujitsuHalcyonController", cg.Component, climate.Climate, uart.UARTDevice)
 
@@ -62,6 +72,26 @@ CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
         cv.Optional(CONF_IGNORE_LOCK, default=False): cv.boolean,
         cv.Optional(CONF_TEMPERATURE_SENSOR): cv.use_id(sensor.Sensor),
         cv.Optional(CONF_HUMIDITY_SENSOR): cv.use_id(sensor.Sensor),
+        cv.Optional(CONF_FUNCTION, default={CONF_NAME: "Function", CONF_MODE: "BOX"}): number.number_schema(
+            CustomNumber,
+            entity_category=ENTITY_CATEGORY_CONFIG
+        ),
+        cv.Optional(CONF_FUNCTION_VALUE, default={CONF_NAME: "Function Value", CONF_MODE: "BOX"}): number.number_schema(
+            CustomNumber,
+            entity_category=ENTITY_CATEGORY_CONFIG
+        ),
+        cv.Optional(CONF_FUNCTION_UNIT, default={CONF_NAME: "Function Unit", CONF_MODE: "BOX"}): number.number_schema(
+            CustomNumber,
+            entity_category=ENTITY_CATEGORY_CONFIG
+        ),
+        cv.Optional(CONF_GET_FUNCTION, default={CONF_NAME: "Function_Read"}): button.button_schema(
+            CustomButton,
+            entity_category=ENTITY_CATEGORY_CONFIG
+        ),
+        cv.Optional(CONF_SET_FUNCTION, default={CONF_NAME: "Function_Write", CONF_DISABLED_BY_DEFAULT: True}): button.button_schema(
+            CustomButton,
+            entity_category=ENTITY_CATEGORY_CONFIG
+        ),
         cv.Optional(CONF_USE_SENSOR, default={CONF_NAME: "Use Sensor", CONF_INTERNAL: True}): switch.switch_schema(
             CustomSwitch,
             entity_category=ENTITY_CATEGORY_CONFIG,
@@ -141,6 +171,12 @@ async def to_code(config):
     varx = cg.Pvariable(config[CONF_USE_SENSOR][CONF_ID], var.use_sensor_switch)
     await switch.register_switch(varx, config[CONF_USE_SENSOR])
 
+    varx = cg.Pvariable(config[CONF_GET_FUNCTION][CONF_ID], var.get_function)
+    await button.register_button(varx, config[CONF_GET_FUNCTION])
+
+    varx = cg.Pvariable(config[CONF_SET_FUNCTION][CONF_ID], var.set_function)
+    await button.register_button(varx, config[CONF_SET_FUNCTION])
+
     varx = cg.Pvariable(config[CONF_ADVANCE_VERTICAL_LOUVER][CONF_ID], var.advance_vertical_louver_button)
     await button.register_button(varx, config[CONF_ADVANCE_VERTICAL_LOUVER])
 
@@ -158,6 +194,33 @@ async def to_code(config):
 
     varx = cg.Pvariable(config[CONF_REMOTE_SENSOR][CONF_ID], var.remote_sensor)
     await sensor.register_sensor(varx, config[CONF_REMOTE_SENSOR])
+
+    varx = cg.Pvariable(config[CONF_FUNCTION][CONF_ID], var.function)
+    await number.register_number(
+        varx,
+        config[CONF_FUNCTION],
+        min_value=0,
+        max_value=255,
+        step=1
+    )
+
+    varx = cg.Pvariable(config[CONF_FUNCTION_VALUE][CONF_ID], var.function_value)
+    await number.register_number(
+        varx,
+        config[CONF_FUNCTION_VALUE],
+        min_value=0,
+        max_value=255,
+        step=1
+    )
+
+    varx = cg.Pvariable(config[CONF_FUNCTION_UNIT][CONF_ID], var.function_unit)
+    await number.register_number(
+        varx,
+        config[CONF_FUNCTION_UNIT],
+        min_value=0,
+        max_value=15,
+        step=1
+    )
 
     if CONF_TEMPERATURE_SENSOR in config:
         cg.add(var.set_temperature_sensor(await cg.get_variable(config[CONF_TEMPERATURE_SENSOR])))

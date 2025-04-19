@@ -188,6 +188,8 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
                 break;
 
             case PacketTypeEnum::Function:
+                if (this->callbacks.Function)
+                    deferred_callback = [&](){ this->callbacks.Function(packet.Function); };
                 break;
             case PacketTypeEnum::Status:
                 break;
@@ -215,7 +217,6 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
             this->initialization_stage = InitializationStageEnum::FindNextControllerRx;
         }
 
-        // Next dest is always IU1 if tx packet is FUNCTION, but we have no support for tx FUNCTION at this time
         tx_packet.TokenDestinationType = this->next_token_destination_type;
         tx_packet.TokenDestinationAddress = this->next_token_destination_type == AddressTypeEnum::Controller ? this->controller_address + 1 : 1;
 
@@ -224,6 +225,11 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
         else if ((error_flag_changed && this->is_primary_controller()) ||
                  (packet.Type == PacketTypeEnum::Error && !this->is_primary_controller()))
             tx_packet.Type = PacketTypeEnum::Error;
+        else if (!this->function_queue.empty()) {
+            tx_packet.Type = PacketTypeEnum::Function;
+            tx_packet.Function = this->function_queue.front();
+            this->function_queue.pop();
+        }
         else {
             // First CONFIG packet sent from Fujitsu controller has write flag set, but we do not restore state at this time
             tx_packet.Type = PacketTypeEnum::Config;

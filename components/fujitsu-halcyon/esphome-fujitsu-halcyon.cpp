@@ -18,6 +18,7 @@ void FujitsuHalcyonController::setup() {
         {
             .Config = [this](const fujitsu_halcyon_controller::Config& data){ this->update_from_device(data); },
             .Error  = [this](const fujitsu_halcyon_controller::Packet& data){ this->update_from_device(data); },
+            .Function = [this](const fujitsu_halcyon_controller::Function& data){ this->update_from_device(data); },
             .ControllerConfig = [this](const uint8_t address, const fujitsu_halcyon_controller::Config& data){ this->update_from_controller(address, data); },
             .ReadBytes  = [this](uint8_t *buf, size_t length){
                 this->read_array(buf, length);
@@ -346,6 +347,12 @@ void FujitsuHalcyonController::update_from_device(const fujitsu_halcyon_controll
                 ).str());
         }
     }
+}
+
+void FujitsuHalcyonController::update_from_device(const fujitsu_halcyon_controller::Function& data) {
+    this->function->publish_state(data.Function);
+    this->function_value->publish_state(data.Value);
+    this->function_unit->publish_state(data.Unit);
 }
 
 void FujitsuHalcyonController::update_from_controller(const uint8_t address, const fujitsu_halcyon_controller::Config& data) {

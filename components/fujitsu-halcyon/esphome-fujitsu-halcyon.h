@@ -7,6 +7,7 @@
 #include <esphome/components/binary_sensor/binary_sensor.h>
 #include <esphome/components/button/button.h>
 #include <esphome/components/climate/climate.h>
+#include <esphome/components/number/number.h>
 #include <esphome/components/sensor/sensor.h>
 #include <esphome/components/switch/switch.h>
 #include <esphome/components/text_sensor/text_sensor.h>
@@ -28,6 +29,16 @@ class CustomButton : public Component, public button::Button {
     private:
         CustomButton() {};
         std::function<void()> func;
+};
+
+class CustomNumber : public Component, public number::Number {
+    public:
+        CustomNumber(std::function<float(float)> func) : func(func) {};
+        void control(float value) override { this->publish_state(this->func(value)); };
+
+    private:
+        CustomNumber() {};
+        std::function<float(float)> func;
 };
 
 class CustomSwitch : public Component, public switch_::Switch {
@@ -53,6 +64,20 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         CustomButton* advance_vertical_louver_button = new CustomButton([this]() { this->controller->advance_vertical_louver(this->ignore_lock_); });
         CustomButton* advance_horizontal_louver_button = new CustomButton([this]() { this->controller->advance_horizontal_louver(this->ignore_lock_); });
         CustomSwitch* use_sensor_switch = new CustomSwitch([this](bool state) { return this->controller->use_sensor(state, this->ignore_lock_); });
+
+        CustomNumber* function = new CustomNumber([this](float state) { return int(state); });
+        CustomNumber* function_value = new CustomNumber([this](float state) { return int(state); });
+        CustomNumber* function_unit = new CustomNumber([this](float state) { return int(state); });
+        CustomButton* get_function = new CustomButton([this]() {
+            if (this->function->has_state() && this->function_unit->has_state()) {
+                this->function_value->publish_state(NAN);
+                this->controller->get_function(this->function->state, this->function_unit->state);
+            }
+        });
+        CustomButton* set_function = new CustomButton([this]() {
+            if (this->function->has_state() && this->function_value->has_state() && this->function_unit->has_state())
+                this->controller->set_function(this->function->state, this->function_value->state, this->function_unit->state);
+        });
 
         FujitsuHalcyonController(uart::IDFUARTComponent *parent, uint8_t controller_address) : uart::UARTDevice(parent), controller_address_(controller_address) {}
 
@@ -81,6 +106,7 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
 
         void update_from_device(const fujitsu_halcyon_controller::Config& data);
         void update_from_device(const fujitsu_halcyon_controller::Packet& data);
+        void update_from_device(const fujitsu_halcyon_controller::Function& data);
         void update_from_controller(const uint8_t address, const fujitsu_halcyon_controller::Config& data);
 
         void log_buffer(const char* dir, const uint8_t* buf, size_t length);

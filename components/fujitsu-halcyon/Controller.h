@@ -74,7 +74,7 @@ class Controller {
 
     public:
         Controller(uint8_t uart_num, uint8_t controller_address, const Callbacks& callbacks, QueueHandle_t uart_event_queue = nullptr)
-            : uart_num(uart_num), controller_address(controller_address), uart_event_queue(uart_event_queue), callbacks(callbacks) {}
+            : uart_num(static_cast<uart_port_t>(uart_num)), controller_address(controller_address), uart_event_queue(uart_event_queue), callbacks(callbacks) {}
 
         bool start();
         bool is_initialized() const { return this->initialization_stage == InitializationStageEnum::Complete; }
@@ -107,7 +107,7 @@ class Controller {
         void process_packet(const Packet::Buffer& buffer, bool lastPacketOnWire = true);
 
     private:
-        uint8_t uart_num;
+        uart_port_t uart_num;
         uint8_t controller_address;
         QueueHandle_t uart_event_queue;
         Callbacks callbacks;

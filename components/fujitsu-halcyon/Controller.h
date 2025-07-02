@@ -19,7 +19,7 @@ constexpr uart_config_t UARTConfig = {
         .stop_bits = UART_STOP_BITS_1,
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         .rx_flow_ctrl_thresh = 0,
-        .source_clk = UART_SCLK_APB,
+        .source_clk = UART_SCLK_DEFAULT,
 };
 
 constexpr uint8_t UARTInterPacketSymbolSpacing = 2;

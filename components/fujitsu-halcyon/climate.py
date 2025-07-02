@@ -58,10 +58,12 @@ BinarySensor = cg.esphome_ns.class_("BinarySensor", cg.Component, binary_sensor.
 TextSensor = cg.esphome_ns.class_("TextSensor", cg.Component, text_sensor.TextSensor)
 Sensor = cg.esphome_ns.class_("Sensor", cg.Component, sensor.Sensor)
 
+custom_ns = cg.esphome_ns.namespace("custom")
+CustomButton = custom_ns.class_("CustomButton", cg.Component, button.Button)
+CustomNumber = custom_ns.class_("CustomNumber", cg.Component, number.Number)
+CustomSwitch = custom_ns.class_("CustomSwitch", cg.Component, switch.Switch)
+
 fujitsu_halcyon_ns = cg.esphome_ns.namespace("fujitsu_halcyon")
-CustomButton = fujitsu_halcyon_ns.class_("CustomButton", cg.Component, button.Button)
-CustomNumber = fujitsu_halcyon_ns.class_("CustomNumber", cg.Component, number.Number)
-CustomSwitch = fujitsu_halcyon_ns.class_("CustomSwitch", cg.Component, switch.Switch)
 FujitsuHalcyonController = fujitsu_halcyon_ns.class_("FujitsuHalcyonController", cg.Component, climate.Climate, uart.UARTDevice)
 
 CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(

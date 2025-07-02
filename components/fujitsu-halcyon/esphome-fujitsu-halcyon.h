@@ -1,55 +1,24 @@
 #pragma once
 
-#include <functional>
 #include <memory>
 
 #include <esphome/core/component.h>
 #include <esphome/components/binary_sensor/binary_sensor.h>
-#include <esphome/components/button/button.h>
 #include <esphome/components/climate/climate.h>
-#include <esphome/components/number/number.h>
 #include <esphome/components/sensor/sensor.h>
-#include <esphome/components/switch/switch.h>
 #include <esphome/components/text_sensor/text_sensor.h>
 #include <esphome/components/uart/uart.h>
 #include <esphome/components/uart/uart_component_esp_idf.h>
 
 #include <esphome/components/tzsp/tzsp.h>
 
+#include "esphome-custom-button.h"
+#include "esphome-custom-number.h"
+#include "esphome-custom-switch.h"
 #include "Controller.h"
 
 namespace esphome {
 namespace fujitsu_halcyon {
-
-class CustomButton : public Component, public button::Button {
-    public:
-        CustomButton(std::function<void()> func) : func(func) {};
-        void press_action() override { this->func(); };
-
-    private:
-        CustomButton() {};
-        std::function<void()> func;
-};
-
-class CustomNumber : public Component, public number::Number {
-    public:
-        CustomNumber(std::function<float(float)> func) : func(func) {};
-        void control(float value) override { this->publish_state(this->func(value)); };
-
-    private:
-        CustomNumber() {};
-        std::function<float(float)> func;
-};
-
-class CustomSwitch : public Component, public switch_::Switch {
-    public:
-        CustomSwitch(std::function<bool(bool)> func) : func(func) {};
-        void write_state(bool state) override { this->publish_state(this->func(state) ? state : this->state); };
-
-    private:
-        CustomSwitch() {};
-        std::function<bool(bool)> func;
-};
 
 class FujitsuHalcyonController : public Component, public climate::Climate, public uart::UARTDevice, public tzsp::TZSPSender {
     public:
@@ -59,22 +28,22 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         text_sensor::TextSensor* error_code_sensor = new text_sensor::TextSensor();
         sensor::Sensor* remote_sensor = new sensor::Sensor();
 
-        CustomButton* reinitialize_button = new CustomButton([this]() { this->controller->reinitialize(); });
-        CustomButton* reset_filter_button = new CustomButton([this]() { this->controller->reset_filter(this->ignore_lock_); });
-        CustomButton* advance_vertical_louver_button = new CustomButton([this]() { this->controller->advance_vertical_louver(this->ignore_lock_); });
-        CustomButton* advance_horizontal_louver_button = new CustomButton([this]() { this->controller->advance_horizontal_louver(this->ignore_lock_); });
-        CustomSwitch* use_sensor_switch = new CustomSwitch([this](bool state) { return this->controller->use_sensor(state, this->ignore_lock_); });
+        custom::CustomButton* reinitialize_button = new custom::CustomButton([this]() { this->controller->reinitialize(); });
+        custom::CustomButton* reset_filter_button = new custom::CustomButton([this]() { this->controller->reset_filter(this->ignore_lock_); });
+        custom::CustomButton* advance_vertical_louver_button = new custom::CustomButton([this]() { this->controller->advance_vertical_louver(this->ignore_lock_); });
+        custom::CustomButton* advance_horizontal_louver_button = new custom::CustomButton([this]() { this->controller->advance_horizontal_louver(this->ignore_lock_); });
+        custom::CustomSwitch* use_sensor_switch = new custom::CustomSwitch([this](bool state) { return this->controller->use_sensor(state, this->ignore_lock_); });
 
-        CustomNumber* function = new CustomNumber([this](float state) { return int(state); });
-        CustomNumber* function_value = new CustomNumber([this](float state) { return int(state); });
-        CustomNumber* function_unit = new CustomNumber([this](float state) { return int(state); });
-        CustomButton* get_function = new CustomButton([this]() {
+        custom::CustomNumber* function = new custom::CustomNumber([this](float state) { return int(state); });
+        custom::CustomNumber* function_value = new custom::CustomNumber([this](float state) { return int(state); });
+        custom::CustomNumber* function_unit = new custom::CustomNumber([this](float state) { return int(state); });
+        custom::CustomButton* get_function = new custom::CustomButton([this]() {
             if (this->function->has_state() && this->function_unit->has_state()) {
                 this->function_value->publish_state(NAN);
                 this->controller->get_function(this->function->state, this->function_unit->state);
             }
         });
-        CustomButton* set_function = new CustomButton([this]() {
+        custom::CustomButton* set_function = new custom::CustomButton([this]() {
             if (this->function->has_state() && this->function_value->has_state() && this->function_unit->has_state())
                 this->controller->set_function(this->function->state, this->function_value->state, this->function_unit->state);
         });

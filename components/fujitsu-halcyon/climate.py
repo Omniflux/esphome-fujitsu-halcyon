@@ -64,9 +64,8 @@ CustomNumber = fujitsu_halcyon_ns.class_("CustomNumber", cg.Component, number.Nu
 CustomSwitch = fujitsu_halcyon_ns.class_("CustomSwitch", cg.Component, switch.Switch)
 FujitsuHalcyonController = fujitsu_halcyon_ns.class_("FujitsuHalcyonController", cg.Component, climate.Climate, uart.UARTDevice)
 
-CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
+CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
     {
-        cv.GenerateID(): cv.declare_id(FujitsuHalcyonController),
         cv.Optional(CONF_CONTROLLER_ADDRESS, default=0): cv.int_range(0, 15),
         cv.Optional(CONF_TEMPERATURE_CONTROLLER_ADDRESS, default=0): cv.int_range(0, 15),
         cv.Optional(CONF_IGNORE_LOCK, default=False): cv.boolean,
@@ -150,9 +149,8 @@ FINAL_VALIDATE_SCHEMA = uart.final_validate_device_schema(
 )
 
 async def to_code(config):
-    var = cg.new_Pvariable(config[CONF_ID], await cg.get_variable(config[uart.CONF_UART_ID]), config[CONF_CONTROLLER_ADDRESS])
+    var = await climate.new_climate(config, await cg.get_variable(config[uart.CONF_UART_ID]), config[CONF_CONTROLLER_ADDRESS])
     await cg.register_component(var, config)
-    await climate.register_climate(var, config)
     await tzsp.register_tzsp_sender(var, config)
     await uart.register_uart_device(var, config)
 

@@ -52,7 +52,7 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         void setup() override;
         void dump_config() override;
         float get_setup_priority() const override { return esphome::setup_priority::DATA; }
-//        bool can_proceed() { return this->is_failed() || this->controller->is_initialized(); }
+        bool can_proceed() override { return this->controller->is_initialized(); }
 
         void control(const climate::ClimateCall& call) override;
         climate::ClimateTraits traits() override;

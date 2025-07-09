@@ -77,18 +77,6 @@ void FujitsuHalcyonController::setup() {
 
         this->current_humidity = this->humidity_sensor_->state;
     }
-
-/*
-    // Not sure if should timeout, or wait forever.
-    // Not sure if getting stuck at can_proceed() causes boot failure count to increment
-    // which can be problematic later
-    this->set_timeout(10000, [this](){
-        if (!this->can_proceed()) {
-            ESP_LOGE(TAG, "Failed to initialize");
-            this->mark_failed();
-        }
-    });
-*/
 }
 
 void FujitsuHalcyonController::log_buffer(const char* dir, const uint8_t* buf, size_t length) {

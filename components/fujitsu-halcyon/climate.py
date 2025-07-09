@@ -62,9 +62,8 @@ custom_ns = cg.esphome_ns.namespace("custom")
 CustomButton = custom_ns.class_("CustomButton", cg.Component, button.Button)
 CustomNumber = custom_ns.class_("CustomNumber", cg.Component, number.Number)
 CustomSwitch = custom_ns.class_("CustomSwitch", cg.Component, switch.Switch)
-
-fujitsu_halcyon_ns = cg.esphome_ns.namespace("fujitsu_halcyon")
-FujitsuHalcyonController = fujitsu_halcyon_ns.class_("FujitsuHalcyonController", cg.Component, climate.Climate, uart.UARTDevice)
+fujitsu_general_airstage_h_controller_ns = cg.esphome_ns.namespace("fujitsu_general_airstage_h_controller")
+FujitsuHalcyonController = fujitsu_general_airstage_h_controller_ns.class_("FujitsuHalcyonController", cg.Component, climate.Climate, uart.UARTDevice)
 
 CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
     {

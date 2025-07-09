@@ -10,7 +10,7 @@
 
 #include "Packet.h"
 
-namespace fujitsu_halcyon_controller {
+namespace fujitsu_general::airstage::h {
 
 constexpr uart_config_t UARTConfig = {
         .baud_rate = 500,
@@ -103,7 +103,7 @@ class Controller {
         InitializationStageEnum initialization_stage = InitializationStageEnum::FeatureRequest;
         AddressTypeEnum next_token_destination_type = AddressTypeEnum::IndoorUnit;
 
-        bool is_primary_controller() const { return this->controller_address == PrimaryControllerAddress; }
+        bool is_primary_controller() const { return this->controller_address == PrimaryAddress; }
         void process_packet(const Packet::Buffer& buffer, bool lastPacketOnWire = true);
 
     private:

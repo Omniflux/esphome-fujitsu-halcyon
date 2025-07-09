@@ -8,9 +8,9 @@
 #include <esphome/core/log.h>
 using esphome::esp_log_printf_;
 
-namespace fujitsu_halcyon_controller {
+namespace fujitsu_general::airstage::h {
 
-static const char* TAG = "fujitsu_halcyon_controller::Controller";
+static const char* TAG = "fujitsu_general::airstage::h::Controller";
 
 bool Controller::start() {
     int err;
@@ -51,10 +51,9 @@ bool Controller::start() {
         return false;
     }
 
+    // Protocol inter packet spacing is 44ms, the time to transmit 2 symbols at 500bps
     // If we wait for default timeout (time to transmit 10 characters at 500bps),
     // the transmit window is over before processing even begins.
-    // Protocol inter packet spacing is about 45ms, time to transmit two bytes
-    // + processing is also about 45ms
     err = uart_set_rx_timeout(this->uart_num, UARTInterPacketSymbolSpacing);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to set UART RX timeout: %s", esp_err_to_name(err));

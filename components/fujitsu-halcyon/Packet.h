@@ -4,9 +4,10 @@
 #include <bit>
 #include <cstdint>
 
-namespace fujitsu_halcyon_controller {
+namespace fujitsu_general::airstage::h {
 
-constexpr uint8_t PrimaryControllerAddress = 0;
+constexpr uint8_t PrimaryAddress = 0;
+constexpr uint8_t MaxAddress = 15;
 
 enum class AddressTypeEnum : uint8_t {
     IndoorUnit,

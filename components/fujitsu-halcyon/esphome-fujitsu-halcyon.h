@@ -17,8 +17,7 @@
 #include "esphome-custom-switch.h"
 #include "Controller.h"
 
-namespace esphome {
-namespace fujitsu_halcyon {
+namespace esphome::fujitsu_general_airstage_h_controller {
 
 class FujitsuHalcyonController : public Component, public climate::Climate, public uart::UARTDevice, public tzsp::TZSPSender {
     public:
@@ -71,21 +70,21 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         sensor::Sensor* temperature_sensor_{};
 
     private:
-        fujitsu_halcyon_controller::Controller* controller;
+        fujitsu_general::airstage::h::Controller* controller;
 
-        void update_from_device(const fujitsu_halcyon_controller::Config& data);
-        void update_from_device(const fujitsu_halcyon_controller::Packet& data);
-        void update_from_device(const fujitsu_halcyon_controller::Function& data);
-        void update_from_controller(const uint8_t address, const fujitsu_halcyon_controller::Config& data);
+        void update_from_device(const fujitsu_general::airstage::h::Config& data);
+        void update_from_device(const fujitsu_general::airstage::h::Packet& data);
+        void update_from_device(const fujitsu_general::airstage::h::Function& data);
+        void update_from_controller(const uint8_t address, const fujitsu_general::airstage::h::Config& data);
 
         void log_buffer(const char* dir, const uint8_t* buf, size_t length);
 
-        static constexpr climate::ClimateMode mode_to_climate_mode(fujitsu_halcyon_controller::ModeEnum mode) noexcept;
-        static constexpr climate::ClimateFanMode fan_speed_to_climate_fan_mode(fujitsu_halcyon_controller::FanSpeedEnum fan_speed) noexcept;
+        static constexpr climate::ClimateMode mode_to_climate_mode(fujitsu_general::airstage::h::ModeEnum mode) noexcept;
+        static constexpr climate::ClimateFanMode fan_speed_to_climate_fan_mode(fujitsu_general::airstage::h::FanSpeedEnum fan_speed) noexcept;
         static constexpr climate::ClimateSwingMode swing_mode_to_climate_swing_mode(bool horizontal, bool vertical) noexcept;
 
-        static constexpr fujitsu_halcyon_controller::ModeEnum climate_mode_to_mode(climate::ClimateMode mode) noexcept;
-        static constexpr fujitsu_halcyon_controller::FanSpeedEnum climate_fan_mode_to_fan_speed(climate::ClimateFanMode fan_speed) noexcept;
+        static constexpr fujitsu_general::airstage::h::ModeEnum climate_mode_to_mode(climate::ClimateMode mode) noexcept;
+        static constexpr fujitsu_general::airstage::h::FanSpeedEnum climate_fan_mode_to_fan_speed(climate::ClimateFanMode fan_speed) noexcept;
         static constexpr std::pair<bool, bool> climate_swing_mode_to_swing_mode(climate::ClimateSwingMode swing_mode) noexcept;
 
         static constexpr uint8_t uart_data_bits_to_uart_config_data_bits(uart_word_length_t bits) noexcept;
@@ -93,5 +92,4 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         static constexpr uart::UARTParityOptions uart_parity_to_uart_config_parity(uart_parity_t parity) noexcept;
 };
 
-}
 }

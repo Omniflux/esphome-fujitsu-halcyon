@@ -2,7 +2,7 @@
 
 #include "Packet.h"
 
-namespace fujitsu_halcyon_controller {
+namespace fujitsu_general::airstage::h {
 
 Packet::Packet(Buffer buffer) {
     auto getField = [&buffer](const ByteMaskShiftData& bms) -> uint8_t {
@@ -154,7 +154,7 @@ Packet::Buffer Packet::to_buffer() const {
                 setField(BMS.Config.Controller.Maintenance, this->Config.Controller.Maintenance);
                 setField(BMS.Config.Controller.ResetFilterTimer, this->Config.Controller.ResetFilterTimer);
 
-                if (this->SourceAddress != PrimaryControllerAddress)
+                if (this->SourceAddress != PrimaryAddress)
                     buffer[5] |= 0b00100000; // Unknown bit set in all captured config packets from secondary controller
             }
 

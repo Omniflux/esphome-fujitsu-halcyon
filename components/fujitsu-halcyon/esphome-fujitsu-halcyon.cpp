@@ -1,8 +1,8 @@
 #include "esphome-fujitsu-halcyon.h"
 
-#include <iomanip>
-#include <ios>
-#include <sstream>
+#include <array>
+
+#include <esphome/core/helpers.h>
 
 namespace esphome::fujitsu_general_airstage_h_controller {
 
@@ -331,19 +331,10 @@ void FujitsuHalcyonController::update_from_device(const fujitsu_general::airstag
             if (!data.Error.ErrorCode)
                 this->error_code_sensor->publish_state("");
             else
-                // TODO Replace with std::format when using ESP-IDF 5.2+
-                //this->error_code_sensor->publish_state(std::format("{:02d} {:02X}", data.SourceAddress, data.Error.ErrorCode));
-                this->error_code_sensor->publish_state((
-                    std::stringstream{} <<
-                    std::setfill('0') <<
-                    std::setw(2) <<
-                    data.SourceAddress <<
-                    ' ' <<
-                    std::uppercase <<
-                    std::hex <<
-                    std::setw(2) <<
-                    data.Error.ErrorCode
-                ).str());
+            {
+                std::array<uint8_t, 2> errorBytes = { data.SourceAddress, data.Error.ErrorCode };
+                this->error_code_sensor->publish_state(format_hex_pretty(errorBytes.data(), errorBytes.size(), ' '));
+            }
         }
     }
 }

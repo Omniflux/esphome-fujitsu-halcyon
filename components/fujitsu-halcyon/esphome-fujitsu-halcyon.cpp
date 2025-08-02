@@ -19,6 +19,9 @@ void FujitsuHalcyonController::setup() {
             .Error  = [this](const fujitsu_general::airstage::h::Packet& data){ this->update_from_device(data); },
             .Function = [this](const fujitsu_general::airstage::h::Function& data){ this->update_from_device(data); },
             .ControllerConfig = [this](const uint8_t address, const fujitsu_general::airstage::h::Config& data){ this->update_from_controller(address, data); },
+            .InitializationStage = [this](const fujitsu_general::airstage::h::InitializationStageEnum stage){
+                this->initialization_sensor->publish_state(str_sprintf("(%d/%d)", stage, fujitsu_general::airstage::h::InitializationStageEnum::Complete));
+            },
             .ReadBytes  = [this](uint8_t *buf, size_t length){
                 this->read_array(buf, length);
                 this->log_buffer("RX", buf, length);

@@ -41,6 +41,7 @@ CONF_IGNORE_LOCK = "ignore_lock"
 CONF_STANDBY_MODE = "standby_mode"
 CONF_ERROR_CODE = "error_code"
 CONF_ERROR_STATE = "error_state"
+CONF_INITIALIZATION_STAGE = "initialization_stage"
 CONF_REMOTE_SENSOR = "remote_sensor"
 CONF_ADVANCE_VERTICAL_LOUVER = "advance_vertical_louver"
 CONF_ADVANCE_HORIZONTAL_LOUVER = "advance_horizontal_louver"
@@ -117,6 +118,10 @@ CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
             TextSensor,
             entity_category=ENTITY_CATEGORY_DIAGNOSTIC
         ),
+        cv.Optional(CONF_INITIALIZATION_STAGE, default={CONF_NAME: "Initialization Stage"}): text_sensor.text_sensor_schema(
+            TextSensor,
+            entity_category=ENTITY_CATEGORY_DIAGNOSTIC
+        ),
         cv.Optional(CONF_ADVANCE_VERTICAL_LOUVER, default={CONF_NAME: "Advance Vertical Louver", CONF_INTERNAL: True}): button.button_schema(
             CustomButton
         ),
@@ -166,6 +171,9 @@ async def to_code(config):
 
     varx = cg.Pvariable(config[CONF_ERROR_CODE][CONF_ID], var.error_code_sensor)
     await text_sensor.register_text_sensor(varx, config[CONF_ERROR_CODE])
+
+    varx = cg.Pvariable(config[CONF_INITIALIZATION_STAGE][CONF_ID], var.initialization_sensor)
+    await text_sensor.register_text_sensor(varx, config[CONF_INITIALIZATION_STAGE])
 
     varx = cg.Pvariable(config[CONF_USE_SENSOR][CONF_ID], var.use_sensor_switch)
     await switch.register_switch(varx, config[CONF_USE_SENSOR])

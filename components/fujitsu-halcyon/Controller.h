@@ -60,6 +60,7 @@ class Controller {
     using ErrorCallback  = std::function<void(const Packet&)>;
     using FunctionCallback = std::function<void(const Function&)>;
     using ControllerConfigCallback = std::function<void(const uint8_t address, const Config&)>;
+    using InitializationStageCallback = std::function<void(const InitializationStageEnum stage)>;
     using ReadBytesCallback  = std::function<void(uint8_t *data, size_t len)>;
     using WriteBytesCallback = std::function<void(const uint8_t *data, size_t len)>;
 
@@ -68,17 +69,21 @@ class Controller {
         ErrorCallback Error;
         FunctionCallback Function;
         ControllerConfigCallback ControllerConfig;
+        InitializationStageCallback InitializationStage;
         ReadBytesCallback ReadBytes;
         WriteBytesCallback WriteBytes;
     };
 
     public:
         Controller(uint8_t uart_num, uint8_t controller_address, const Callbacks& callbacks, QueueHandle_t uart_event_queue = nullptr)
-            : uart_num(static_cast<uart_port_t>(uart_num)), controller_address(controller_address), uart_event_queue(uart_event_queue), callbacks(callbacks) {}
+            : uart_num(static_cast<uart_port_t>(uart_num)), controller_address(controller_address), uart_event_queue(uart_event_queue), callbacks(callbacks) {
+            this->set_initialization_stage(InitializationStageEnum::FeatureRequest);
+        }
 
         bool start();
         bool is_initialized() const { return this->initialization_stage == InitializationStageEnum::Complete; }
-        void reinitialize() { this->initialization_stage = InitializationStageEnum::FeatureRequest; }
+        void reinitialize() { this->set_initialization_stage(InitializationStageEnum::FeatureRequest); }
+        InitializationStageEnum get_initialization_stage() const { return this->initialization_stage; }
         const struct Features& get_features() const { return this->features; }
 
         void set_current_temperature(float temperature);
@@ -100,10 +105,11 @@ class Controller {
         void set_function(uint8_t function, uint8_t value, uint8_t unit) { this->function_queue.push({ true, function, value, unit }); }
 
     protected:
-        InitializationStageEnum initialization_stage = InitializationStageEnum::FeatureRequest;
+        InitializationStageEnum initialization_stage;
         AddressTypeEnum next_token_destination_type = AddressTypeEnum::IndoorUnit;
 
         bool is_primary_controller() const { return this->controller_address == PrimaryAddress; }
+        void set_initialization_stage(const InitializationStageEnum stage);
         void process_packet(const Packet::Buffer& buffer, bool lastPacketOnWire = true);
 
     private:

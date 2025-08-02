@@ -142,6 +142,12 @@ void Controller::uart_write_bytes(const uint8_t *buf, size_t length) {
         ::uart_write_bytes(this->uart_num, buf, length);
 }
 
+void Controller::set_initialization_stage(const InitializationStageEnum stage) {
+    this->initialization_stage = stage;
+    if (this->callbacks.InitializationStage)
+        callbacks.InitializationStage(stage);
+}
+
 void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnWire) {
     bool error_flag_changed = false;
     std::function<void()> deferred_callback;
@@ -156,7 +162,7 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
             this->next_token_destination_type = AddressTypeEnum::IndoorUnit;
 
         // Fujitsu RC1 checks for next controller twice (in case of slow booting controller?), but we are only checking once
-        this->initialization_stage = InitializationStageEnum::Complete;
+        this->set_initialization_stage(InitializationStageEnum::Complete);
     }
 
     // Process packets from Indoor Units
@@ -184,7 +190,7 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
 
             case PacketTypeEnum::Features:
                 this->features = packet.Features;
-                this->initialization_stage = InitializationStageEnum::FindNextControllerTx;
+                this->set_initialization_stage(InitializationStageEnum::FindNextControllerTx);
                 break;
 
             case PacketTypeEnum::Function:
@@ -214,7 +220,7 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
 
         if (this->initialization_stage == InitializationStageEnum::FindNextControllerTx) {
             this->next_token_destination_type = AddressTypeEnum::Controller;
-            this->initialization_stage = InitializationStageEnum::FindNextControllerRx;
+            this->set_initialization_stage(InitializationStageEnum::FindNextControllerRx);
         }
 
         tx_packet.TokenDestinationType = this->next_token_destination_type;

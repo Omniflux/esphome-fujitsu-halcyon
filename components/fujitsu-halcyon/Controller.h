@@ -30,7 +30,33 @@ constexpr uint8_t MaxSetpoint = 30;
 constexpr float MinTemperature = 0.0;
 constexpr float MaxTemperature = 60.0;
 
+constexpr Features DefaultFeatures = {
+        .Mode = {
+            .Auto = true,
+            .Heat = true,
+            .Fan = true,
+            .Dry = true,
+            .Cool = true,
+        },
+
+        .FanSpeed = {
+            .Quiet = false,
+            .Low = true,
+            .Medium = true,
+            .High = true,
+            .Auto = true,
+        },
+
+        .FilterTimer = false,
+        .SensorSwitching = false,
+        .Maintenance = false,
+        .EconomyMode = true,
+        .HorizontalLouvers = false,
+        .VerticalLouvers = false,
+};
+
 enum class InitializationStageEnum : uint8_t {
+    DetectFeatureSupport,
     FeatureRequest,
     FindNextControllerTx,
     FindNextControllerRx,
@@ -77,12 +103,12 @@ class Controller {
     public:
         Controller(uint8_t uart_num, uint8_t controller_address, const Callbacks& callbacks, QueueHandle_t uart_event_queue = nullptr)
             : uart_num(static_cast<uart_port_t>(uart_num)), controller_address(controller_address), uart_event_queue(uart_event_queue), callbacks(callbacks) {
-            this->set_initialization_stage(InitializationStageEnum::FeatureRequest);
+            this->set_initialization_stage(InitializationStageEnum::DetectFeatureSupport);
         }
 
         bool start();
         bool is_initialized() const { return this->initialization_stage == InitializationStageEnum::Complete; }
-        void reinitialize() { this->set_initialization_stage(InitializationStageEnum::FeatureRequest); }
+        void reinitialize() { this->set_initialization_stage(InitializationStageEnum::DetectFeatureSupport); }
         InitializationStageEnum get_initialization_stage() const { return this->initialization_stage; }
         const struct Features& get_features() const { return this->features; }
 

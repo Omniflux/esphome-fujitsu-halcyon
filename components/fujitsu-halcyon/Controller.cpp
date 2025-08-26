@@ -169,6 +169,14 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
     if (packet.SourceType == AddressTypeEnum::IndoorUnit) {
         switch (packet.Type) {
             [[likely]] case PacketTypeEnum::Config:
+                if (this->initialization_stage == InitializationStageEnum::DetectFeatureSupport) {
+                    if (packet.Config.IndoorUnit.UnknownFlags == 2) { // Guessing this means no feature support among other things
+                        this->features = DefaultFeatures;
+                        this->set_initialization_stage(InitializationStageEnum::FindNextControllerTx);
+                    } else
+                        this->set_initialization_stage(InitializationStageEnum::FeatureRequest);
+                }
+
                 if (this->last_error_flag != packet.Config.IndoorUnit.Error)
                     error_flag_changed = true;
 

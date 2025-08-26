@@ -56,6 +56,8 @@ struct Config {
         bool StandbyMode;
         bool Error;
         bool FilterTimerExpired;
+
+        uint8_t UnknownFlags;
     } IndoorUnit;
 
     struct {
@@ -153,6 +155,7 @@ constexpr struct BMS {
 
             constexpr static auto StandbyMode             = ByteMaskShiftData(2, 0b00001000);
             constexpr static auto Error                   = ByteMaskShiftData(3, 0b10000000);
+            constexpr static auto UnknownFlags            = ByteMaskShiftData(5, 0b11100000);
             constexpr static auto FilterTimerExpired      = ByteMaskShiftData(7, 0b01000000);
         } IndoorUnit = {};
 

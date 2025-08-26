@@ -35,6 +35,8 @@ Packet::Packet(Buffer buffer) {
                 this->Config.IndoorUnit.Lock.ResetFilterTimer = getField(BMS.Config.IndoorUnit.Lock.ResetFilterTimer);
 
                 this->Config.IndoorUnit.FilterTimerExpired = getField(BMS.Config.IndoorUnit.FilterTimerExpired);
+
+                this->Config.IndoorUnit.UnknownFlags = getField(BMS.Config.IndoorUnit.UnknownFlags);
             } else {
                 this->Config.Controller.Write = getField(BMS.Config.Controller.Write);
 
@@ -137,6 +139,7 @@ Packet::Buffer Packet::to_buffer() const {
 
                 setField(BMS.Config.IndoorUnit.FilterTimerExpired, this->Config.IndoorUnit.FilterTimerExpired);
 
+                // setField(BMS.Config.IndoorUnit.UnknownFlags, this->Config.IndoorUnit.UnknownFlags);
                 buffer[5] |= 0b10100000; // Unknown bits set in all captured config packets from indoor unit
                 buffer[7] |= 0b00100000; // Unknown bit set in all captured config packets from indoor unit
             } else {

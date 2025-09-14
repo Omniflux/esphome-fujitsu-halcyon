@@ -88,7 +88,7 @@ climate:
   - platform: fujitsu-halcyon
     name: None
     controller_address: 1
-    temperature_sensor_id: my_temp_sensor
+    temperature_sensor_id: my_temperature_sensor
     humidity_sensor: my_humidity_sensor
 ```
 

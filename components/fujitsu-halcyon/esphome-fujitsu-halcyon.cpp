@@ -43,7 +43,8 @@ void FujitsuHalcyonController::setup() {
     // Use specified sensor for this components reported temperature
     if (this->temperature_sensor_ != nullptr) {
         // Temperature sensor is in Fahrenheit, but need Celsius
-        if (this->temperature_sensor_->get_unit_of_measurement().ends_with("F"))
+        const auto unit_of_measurement = this->temperature_sensor_->get_unit_of_measurement_ref();
+        if (unit_of_measurement[unit_of_measurement.size() - 1] == 'F')
         {
             this->temperature_sensor_->add_on_raw_state_callback([this](float state) {
                 this->current_temperature = esphome::fahrenheit_to_celsius(state);
@@ -153,10 +154,11 @@ climate::ClimateTraits FujitsuHalcyonController::traits() {
 
     // Current temperature
     if (this->temperature_sensor_ != nullptr || !this->remote_sensor->is_internal())
-        traits.set_supports_current_temperature(true);
+        traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
 
     // Current humidity
-    traits.set_supports_current_humidity(this->humidity_sensor_ != nullptr);
+    if (this->humidity_sensor_ != nullptr)
+        traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_HUMIDITY);
 
     // Mode
     if (features.Mode.Auto)

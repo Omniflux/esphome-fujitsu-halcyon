@@ -46,16 +46,14 @@ void FujitsuHalcyonController::setup() {
         if (this->temperature_sensor_->get_unit_of_measurement().ends_with("F"))
         {
             this->temperature_sensor_->add_on_raw_state_callback([this](float state) {
-                auto temperatureC = (state - 32.0) * (5.0/9.0);
-
-                this->current_temperature = temperatureC;
+                this->current_temperature = esphome::fahrenheit_to_celsius(state);
                 this->publish_state();
 
                 // Send this temperature to the Fujitsu IU
-                this->controller->set_current_temperature(temperatureC);
+                this->controller->set_current_temperature(this->current_temperature);
             });
 
-            this->current_temperature = (this->temperature_sensor_->state - 32.0) * (5.0/9.0);
+            this->current_temperature = esphome::fahrenheit_to_celsius(this->temperature_sensor_->state);
         }
         // Temperature sensor is in Celsius
         else

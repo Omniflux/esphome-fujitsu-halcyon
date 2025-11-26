@@ -3,6 +3,7 @@
 #include <array>
 
 #include <esphome/core/helpers.h>
+#include <esphome/core/version.h>
 
 namespace esphome::fujitsu_general_airstage_h_controller {
 
@@ -43,8 +44,12 @@ void FujitsuHalcyonController::setup() {
     // Use specified sensor for this components reported temperature
     if (this->temperature_sensor_ != nullptr) {
         // Temperature sensor is in Fahrenheit, but need Celsius
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
         const auto unit_of_measurement = this->temperature_sensor_->get_unit_of_measurement_ref();
         if (unit_of_measurement[unit_of_measurement.size() - 1] == 'F')
+#else
+        if (this->temperature_sensor_->get_unit_of_measurement().ends_with("F"))
+#endif
         {
             this->temperature_sensor_->add_on_raw_state_callback([this](float state) {
                 this->current_temperature = esphome::fahrenheit_to_celsius(state);
@@ -151,7 +156,7 @@ climate::ClimateTraits FujitsuHalcyonController::traits() {
     traits.set_visual_temperature_step(1);
     traits.set_visual_min_temperature(fujitsu_general::airstage::h::MinSetpoint);
     traits.set_visual_max_temperature(fujitsu_general::airstage::h::MaxSetpoint);
-
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
     // Current temperature
     if (this->temperature_sensor_ != nullptr || !this->remote_sensor->is_internal())
         traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
@@ -159,6 +164,14 @@ climate::ClimateTraits FujitsuHalcyonController::traits() {
     // Current humidity
     if (this->humidity_sensor_ != nullptr)
         traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_HUMIDITY);
+#else
+    // Current temperature
+    if (this->temperature_sensor_ != nullptr || !this->remote_sensor->is_internal())
+        traits.set_supports_current_temperature(true);
+
+    // Current humidity
+    traits.set_supports_current_humidity(this->humidity_sensor_ != nullptr);
+#endif
 
     // Mode
     if (features.Mode.Auto)

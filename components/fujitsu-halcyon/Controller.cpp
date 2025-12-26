@@ -51,9 +51,15 @@ bool Controller::start() {
         return false;
     }
 
-    // Protocol inter packet spacing is 44ms, the time to transmit 2 symbols at 500bps
-    // If we wait for default timeout (time to transmit 10 characters at 500bps),
-    // the transmit window is over before processing even begins.
+    // Ensure large enough not to trigger mid frame, resynchronize from rx_timeout instead
+    err = uart_set_rx_full_threshold(this->uart_num, Packet::FrameSize * 4);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set UART RX full threshold: %s", esp_err_to_name(err));
+        return false;
+    }
+
+    // Default timeout (time to transmit 10 characters at 500bps) is too long
+    // If we wait for default timeout the transmit window is over before processing even begins.
     err = uart_set_rx_timeout(this->uart_num, UARTInterPacketSymbolSpacing);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to set UART RX timeout: %s", esp_err_to_name(err));

@@ -50,7 +50,6 @@ uart:
   rx_pin: GPIO19  # Device dependent
   baud_rate: 500
   parity: EVEN
-  rx_full_threshold: 120
 
 climate:
 - platform: fujitsu-halcyon

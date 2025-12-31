@@ -1,25 +1,29 @@
 #include "esphome-fujitsu-halcyon.h"
 
-#include <iomanip>
-#include <ios>
-#include <sstream>
+#include <array>
 
-namespace esphome {
-namespace fujitsu_halcyon {
+#include <esphome/core/helpers.h>
+#include <esphome/core/version.h>
 
-static const auto TAG = "fujitsu-halcyon";
+namespace esphome::fujitsu_general_airstage_h_controller {
+
+static const auto TAG = "esphome::fujitsu_general_airstage_h_controller";
 
 constexpr std::array ControllerName = { "Primary", "Secondary", "Undocumented" };
 
 void FujitsuHalcyonController::setup() {
-    this->controller = new fujitsu_halcyon_controller::Controller(
+    this->controller = new fujitsu_general::airstage::h::Controller(
         static_cast<uart::IDFUARTComponent*>(this->parent_)->get_hw_serial_number(),
         this->controller_address_,
         {
-            .Config = [this](const fujitsu_halcyon_controller::Config& data){ this->update_from_device(data); },
-            .Error  = [this](const fujitsu_halcyon_controller::Packet& data){ this->update_from_device(data); },
-            .ZoneConfig = [this](const fujitsu_halcyon_controller::ZoneConfig& data){ this->update_from_device(data); },
-            .ControllerConfig = [this](const uint8_t address, const fujitsu_halcyon_controller::Config& data){ this->update_from_controller(address, data); },
+            .Config = [this](const fujitsu_general::airstage::h::Config& data){ this->update_from_device(data); },
+            .Error  = [this](const fujitsu_general::airstage::h::Packet& data){ this->update_from_device(data); },
+            .ZoneConfig = [this](const fujitsu_general::airstage::h::ZoneConfig& data){ this->update_from_device(data); },
+            .Function = [this](const fujitsu_general::airstage::h::Function& data){ this->update_from_device(data); },
+            .ControllerConfig = [this](const uint8_t address, const fujitsu_general::airstage::h::Config& data){ this->update_from_controller(address, data); },
+            .InitializationStage = [this](const fujitsu_general::airstage::h::InitializationStageEnum stage){
+                this->initialization_sensor->publish_state(str_sprintf("(%d/%d)", stage, fujitsu_general::airstage::h::InitializationStageEnum::Complete));
+            },
             .ReadBytes  = [this](uint8_t *buf, size_t length){
                 this->read_array(buf, length);
                 this->log_buffer("RX", buf, length);
@@ -41,19 +45,22 @@ void FujitsuHalcyonController::setup() {
     // Use specified sensor for this components reported temperature
     if (this->temperature_sensor_ != nullptr) {
         // Temperature sensor is in Fahrenheit, but need Celsius
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
+        const auto unit_of_measurement = this->temperature_sensor_->get_unit_of_measurement_ref();
+        if (unit_of_measurement[unit_of_measurement.size() - 1] == 'F')
+#else
         if (this->temperature_sensor_->get_unit_of_measurement().ends_with("F"))
+#endif
         {
             this->temperature_sensor_->add_on_raw_state_callback([this](float state) {
-                auto temperatureC = (state - 32.0) * (5.0/9.0);
-
-                this->current_temperature = temperatureC;
+                this->current_temperature = esphome::fahrenheit_to_celsius(state);
                 this->publish_state();
 
                 // Send this temperature to the Fujitsu IU
-                this->controller->set_current_temperature(temperatureC);
+                this->controller->set_current_temperature(this->current_temperature);
             });
 
-            this->current_temperature = (this->temperature_sensor_->state - 32.0) * (5.0/9.0);
+            this->current_temperature = esphome::fahrenheit_to_celsius(this->temperature_sensor_->state);
         }
         // Temperature sensor is in Celsius
         else
@@ -137,10 +144,10 @@ void FujitsuHalcyonController::dump_config() {
     LOG_TZSP("  ", this);
 
     this->check_uart_settings(
-        fujitsu_halcyon_controller::UARTConfig.baud_rate,
-        this->uart_stop_bits_to_uart_config_stop_bits(fujitsu_halcyon_controller::UARTConfig.stop_bits),
-        this->uart_parity_to_uart_config_parity(fujitsu_halcyon_controller::UARTConfig.parity),
-        this->uart_data_bits_to_uart_config_data_bits(fujitsu_halcyon_controller::UARTConfig.data_bits)
+        fujitsu_general::airstage::h::UARTConfig.baud_rate,
+        this->uart_stop_bits_to_uart_config_stop_bits(fujitsu_general::airstage::h::UARTConfig.stop_bits),
+        this->uart_parity_to_uart_config_parity(fujitsu_general::airstage::h::UARTConfig.parity),
+        this->uart_data_bits_to_uart_config_data_bits(fujitsu_general::airstage::h::UARTConfig.data_bits)
     );
 
     this->dump_traits_(TAG);
@@ -155,15 +162,24 @@ climate::ClimateTraits FujitsuHalcyonController::traits() {
 
     // Target temperature / Setpoint
     traits.set_visual_temperature_step(1);
-    traits.set_visual_min_temperature(fujitsu_halcyon_controller::MinSetpoint);
-    traits.set_visual_max_temperature(fujitsu_halcyon_controller::MaxSetpoint);
+    traits.set_visual_min_temperature(fujitsu_general::airstage::h::MinSetpoint);
+    traits.set_visual_max_temperature(fujitsu_general::airstage::h::MaxSetpoint);
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2025, 11, 0)
+    // Current temperature
+    if (this->temperature_sensor_ != nullptr || !this->remote_sensor->is_internal())
+        traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
 
+    // Current humidity
+    if (this->humidity_sensor_ != nullptr)
+        traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_HUMIDITY);
+#else
     // Current temperature
     if (this->temperature_sensor_ != nullptr || !this->remote_sensor->is_internal())
         traits.set_supports_current_temperature(true);
 
     // Current humidity
     traits.set_supports_current_humidity(this->humidity_sensor_ != nullptr);
+#endif
 
     // Mode
     if (features.Mode.Auto)
@@ -271,7 +287,7 @@ void FujitsuHalcyonController::control(const climate::ClimateCall& call) {
     this->publish_state();
 }
 
-void FujitsuHalcyonController::update_from_device(const fujitsu_halcyon_controller::Config& data) {
+void FujitsuHalcyonController::update_from_device(const fujitsu_general::airstage::h::Config& data) {
     using climate::ClimateFanMode;
     using climate::ClimateMode;
     using climate::ClimatePreset;
@@ -333,7 +349,7 @@ void FujitsuHalcyonController::update_from_device(const fujitsu_halcyon_controll
         this->publish_state();
 }
 
-void FujitsuHalcyonController::update_from_device(const fujitsu_halcyon_controller::ZoneConfig& data) {
+void FujitsuHalcyonController::update_from_device(const fujitsu_general::airstage::h::ZoneConfig& data) {
     for (auto i = 0; i < this->zone_switches.size(); i++)
         this->zone_switches[i]->publish_state(data.ActiveZones[i]);
 
@@ -341,8 +357,8 @@ void FujitsuHalcyonController::update_from_device(const fujitsu_halcyon_controll
     this->zone_group_night_switch->publish_state(data.ActiveZoneGroups.Night);
 }
 
-void FujitsuHalcyonController::update_from_device(const fujitsu_halcyon_controller::Packet& data) {
-    using fujitsu_halcyon_controller::PacketTypeEnum;
+void FujitsuHalcyonController::update_from_device(const fujitsu_general::airstage::h::Packet& data) {
+    using fujitsu_general::airstage::h::PacketTypeEnum;
 
     // Error packet
     if (data.Type == PacketTypeEnum::Error)
@@ -357,24 +373,21 @@ void FujitsuHalcyonController::update_from_device(const fujitsu_halcyon_controll
             if (!data.Error.ErrorCode)
                 this->error_code_sensor->publish_state("");
             else
-                // TODO Replace with std::format when using ESP-IDF 5.2+
-                //this->error_code_sensor->publish_state(std::format("{:02d} {:02X}", data.SourceAddress, data.Error.ErrorCode));
-                this->error_code_sensor->publish_state((
-                    std::stringstream{} <<
-                    std::setfill('0') <<
-                    std::setw(2) <<
-                    data.SourceAddress <<
-                    ' ' <<
-                    std::uppercase <<
-                    std::hex <<
-                    std::setw(2) <<
-                    data.Error.ErrorCode
-                ).str());
+            {
+                std::array<uint8_t, 2> errorBytes = { data.SourceAddress, data.Error.ErrorCode };
+                this->error_code_sensor->publish_state(format_hex_pretty(errorBytes.data(), errorBytes.size(), ' '));
+            }
         }
     }
 }
 
-void FujitsuHalcyonController::update_from_controller(const uint8_t address, const fujitsu_halcyon_controller::Config& data) {
+void FujitsuHalcyonController::update_from_device(const fujitsu_general::airstage::h::Function& data) {
+    this->function->publish_state(data.Function);
+    this->function_value->publish_state(data.Value);
+    this->function_unit->publish_state(data.Unit);
+}
+
+void FujitsuHalcyonController::update_from_controller(const uint8_t address, const fujitsu_general::airstage::h::Config& data) {
     if (address == this->temperature_controller_address_ && data.Controller.Temperature) {
         // Make remote controllers sensor visible
         if (this->remote_sensor->is_internal()) {
@@ -395,9 +408,9 @@ void FujitsuHalcyonController::update_from_controller(const uint8_t address, con
     }
 }
 
-constexpr climate::ClimateMode FujitsuHalcyonController::mode_to_climate_mode(const fujitsu_halcyon_controller::ModeEnum mode) {
+constexpr climate::ClimateMode FujitsuHalcyonController::mode_to_climate_mode(const fujitsu_general::airstage::h::ModeEnum mode) {
     using climate::ClimateMode;
-    using FujitsuMode = fujitsu_halcyon_controller::ModeEnum;
+    using FujitsuMode = fujitsu_general::airstage::h::ModeEnum;
 
     switch (mode) {
         case FujitsuMode::Fan:  return ClimateMode::CLIMATE_MODE_FAN_ONLY;
@@ -411,9 +424,9 @@ constexpr climate::ClimateMode FujitsuHalcyonController::mode_to_climate_mode(co
     }
 }
 
-constexpr climate::ClimateFanMode FujitsuHalcyonController::fan_speed_to_climate_fan_mode(const fujitsu_halcyon_controller::FanSpeedEnum fan_speed) {
+constexpr climate::ClimateFanMode FujitsuHalcyonController::fan_speed_to_climate_fan_mode(const fujitsu_general::airstage::h::FanSpeedEnum fan_speed) {
     using climate::ClimateFanMode;
-    using FujitsuFanMode = fujitsu_halcyon_controller::FanSpeedEnum;
+    using FujitsuFanMode = fujitsu_general::airstage::h::FanSpeedEnum;
 
     switch (fan_speed) {
         case FujitsuFanMode::Auto:   return ClimateFanMode::CLIMATE_FAN_AUTO;
@@ -440,9 +453,9 @@ constexpr climate::ClimateSwingMode FujitsuHalcyonController::swing_mode_to_clim
         return ClimateSwingMode::CLIMATE_SWING_OFF;
 }
 
-constexpr fujitsu_halcyon_controller::ModeEnum FujitsuHalcyonController::climate_mode_to_mode(climate::ClimateMode mode) {
+constexpr fujitsu_general::airstage::h::ModeEnum FujitsuHalcyonController::climate_mode_to_mode(climate::ClimateMode mode) {
     using climate::ClimateMode;
-    using FujitsuMode = fujitsu_halcyon_controller::ModeEnum;
+    using FujitsuMode = fujitsu_general::airstage::h::ModeEnum;
 
     switch (mode) {
         case ClimateMode::CLIMATE_MODE_HEAT_COOL: return FujitsuMode::Auto;
@@ -456,9 +469,9 @@ constexpr fujitsu_halcyon_controller::ModeEnum FujitsuHalcyonController::climate
     }
 } 
 
-constexpr fujitsu_halcyon_controller::FanSpeedEnum FujitsuHalcyonController::climate_fan_mode_to_fan_speed(climate::ClimateFanMode fan_speed) {
+constexpr fujitsu_general::airstage::h::FanSpeedEnum FujitsuHalcyonController::climate_fan_mode_to_fan_speed(climate::ClimateFanMode fan_speed) {
     using climate::ClimateFanMode;
-    using FujitsuFanMode = fujitsu_halcyon_controller::FanSpeedEnum;
+    using FujitsuFanMode = fujitsu_general::airstage::h::FanSpeedEnum;
 
     switch (fan_speed) {
         case ClimateFanMode::CLIMATE_FAN_AUTO:   return FujitsuFanMode::Auto;
@@ -515,5 +528,4 @@ constexpr uart::UARTParityOptions FujitsuHalcyonController::uart_parity_to_uart_
     }
 }
 
-}
 }

@@ -1,45 +1,24 @@
 #pragma once
 
 #include <array>
-#include <functional>
 #include <memory>
 
 #include <esphome/core/component.h>
 #include <esphome/components/binary_sensor/binary_sensor.h>
-#include <esphome/components/button/button.h>
 #include <esphome/components/climate/climate.h>
 #include <esphome/components/sensor/sensor.h>
-#include <esphome/components/switch/switch.h>
 #include <esphome/components/text_sensor/text_sensor.h>
 #include <esphome/components/uart/uart.h>
 #include <esphome/components/uart/uart_component_esp_idf.h>
 
 #include <esphome/components/tzsp/tzsp.h>
 
+#include "esphome-custom-button.h"
+#include "esphome-custom-number.h"
+#include "esphome-custom-switch.h"
 #include "Controller.h"
 
-namespace esphome {
-namespace fujitsu_halcyon {
-
-class CustomButton : public Component, public button::Button {
-    public:
-        CustomButton(std::function<void()> func) : func(func) {};
-        void press_action() override { this->func(); };
-
-    private:
-        CustomButton() {};
-        std::function<void()> func;
-};
-
-class CustomSwitch : public Component, public switch_::Switch {
-    public:
-        CustomSwitch(std::function<bool(bool)> func) : func(func) {};
-        void write_state(bool state) override { this->publish_state(this->func(state) ? state : this->state); };
-
-    private:
-        CustomSwitch() {};
-        std::function<bool(bool)> func;
-};
+namespace esphome::fujitsu_general_airstage_h_controller {
 
 class FujitsuHalcyonController : public Component, public climate::Climate, public uart::UARTDevice, public tzsp::TZSPSender {
     public:
@@ -47,25 +26,40 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         binary_sensor::BinarySensor* filter_sensor = new binary_sensor::BinarySensor();
         binary_sensor::BinarySensor* error_sensor = new binary_sensor::BinarySensor();
         text_sensor::TextSensor* error_code_sensor = new text_sensor::TextSensor();
+        text_sensor::TextSensor* initialization_sensor = new text_sensor::TextSensor();
         sensor::Sensor* remote_sensor = new sensor::Sensor();
 
-        CustomButton* reinitialize_button = new CustomButton([this]() { this->controller->reinitialize(); });
-        CustomButton* reset_filter_button = new CustomButton([this]() { this->controller->reset_filter(this->ignore_lock_); });
-        CustomButton* advance_vertical_louver_button = new CustomButton([this]() { this->controller->advance_vertical_louver(this->ignore_lock_); });
-        CustomButton* advance_horizontal_louver_button = new CustomButton([this]() { this->controller->advance_horizontal_louver(this->ignore_lock_); });
-        CustomSwitch* use_sensor_switch = new CustomSwitch([this](bool state) { return this->controller->use_sensor(state, this->ignore_lock_); });
+        custom::CustomButton* reinitialize_button = new custom::CustomButton([this]() { this->controller->reinitialize(); });
+        custom::CustomButton* reset_filter_button = new custom::CustomButton([this]() { this->controller->reset_filter(this->ignore_lock_); });
+        custom::CustomButton* advance_vertical_louver_button = new custom::CustomButton([this]() { this->controller->advance_vertical_louver(this->ignore_lock_); });
+        custom::CustomButton* advance_horizontal_louver_button = new custom::CustomButton([this]() { this->controller->advance_horizontal_louver(this->ignore_lock_); });
+        custom::CustomSwitch* use_sensor_switch = new custom::CustomSwitch([this](bool state) { return this->controller->use_sensor(state, this->ignore_lock_); });
 
-        std::array<CustomSwitch*, fujitsu_halcyon_controller::MaximumZones> zone_switches = [this] {
-            std::array<CustomSwitch*, fujitsu_halcyon_controller::MaximumZones> switches;
+        std::array<custom::CustomSwitch*, fujitsu_general::airstage::h::MaxZone> zone_switches = [this] {
+            std::array<custom::CustomSwitch*, fujitsu_general::airstage::h::MaxZone> switches;
 
             for (auto i = 0; i < switches.size(); i++)
-                switches[i] = new CustomSwitch([this, i](bool state) { return this->controller->set_zone(i, state, this->ignore_lock_); });
+                switches[i] = new custom::CustomSwitch([this, i](bool state) { return this->controller->set_zone(i, state, this->ignore_lock_); });
 
             return switches;
         }();
 
-        CustomSwitch* zone_group_day_switch = new CustomSwitch([this](bool state) { return this->controller->set_zone_group_day(state, this->ignore_lock_); });
-        CustomSwitch* zone_group_night_switch = new CustomSwitch([this](bool state) { return this->controller->set_zone_group_night(state, this->ignore_lock_); });
+        custom::CustomSwitch* zone_group_day_switch = new custom::CustomSwitch([this](bool state) { return this->controller->set_zone_group_day(state, this->ignore_lock_); });
+        custom::CustomSwitch* zone_group_night_switch = new custom::CustomSwitch([this](bool state) { return this->controller->set_zone_group_night(state, this->ignore_lock_); });
+
+        custom::CustomNumber* function = new custom::CustomNumber([this](float state) { return int(state); });
+        custom::CustomNumber* function_value = new custom::CustomNumber([this](float state) { return int(state); });
+        custom::CustomNumber* function_unit = new custom::CustomNumber([this](float state) { return int(state); });
+        custom::CustomButton* get_function = new custom::CustomButton([this]() {
+            if (this->function->has_state() && this->function_unit->has_state()) {
+                this->function_value->publish_state(NAN);
+                this->controller->get_function(this->function->state, this->function_unit->state);
+            }
+        });
+        custom::CustomButton* set_function = new custom::CustomButton([this]() {
+            if (this->function->has_state() && this->function_value->has_state() && this->function_unit->has_state())
+                this->controller->set_function(this->function->state, this->function_value->state, this->function_unit->state);
+        });
 
         FujitsuHalcyonController(uart::IDFUARTComponent *parent, uint8_t controller_address) : uart::UARTDevice(parent), controller_address_(controller_address) {}
 
@@ -90,21 +84,22 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         sensor::Sensor* temperature_sensor_{};
 
     private:
-        fujitsu_halcyon_controller::Controller* controller;
+        fujitsu_general::airstage::h::Controller* controller;
 
-        void update_from_device(const fujitsu_halcyon_controller::Config& data);
-        void update_from_device(const fujitsu_halcyon_controller::ZoneConfig& data);
-        void update_from_device(const fujitsu_halcyon_controller::Packet& data);
-        void update_from_controller(const uint8_t address, const fujitsu_halcyon_controller::Config& data);
+        void update_from_device(const fujitsu_general::airstage::h::Config& data);
+        void update_from_device(const fujitsu_general::airstage::h::ZoneConfig& data);
+        void update_from_device(const fujitsu_general::airstage::h::Packet& data);
+        void update_from_device(const fujitsu_general::airstage::h::Function& data);
+        void update_from_controller(const uint8_t address, const fujitsu_general::airstage::h::Config& data);
 
         void log_buffer(const char* dir, const uint8_t* buf, size_t length);
 
-        static constexpr climate::ClimateMode mode_to_climate_mode(fujitsu_halcyon_controller::ModeEnum mode) noexcept;
-        static constexpr climate::ClimateFanMode fan_speed_to_climate_fan_mode(fujitsu_halcyon_controller::FanSpeedEnum fan_speed) noexcept;
+        static constexpr climate::ClimateMode mode_to_climate_mode(fujitsu_general::airstage::h::ModeEnum mode) noexcept;
+        static constexpr climate::ClimateFanMode fan_speed_to_climate_fan_mode(fujitsu_general::airstage::h::FanSpeedEnum fan_speed) noexcept;
         static constexpr climate::ClimateSwingMode swing_mode_to_climate_swing_mode(bool horizontal, bool vertical) noexcept;
 
-        static constexpr fujitsu_halcyon_controller::ModeEnum climate_mode_to_mode(climate::ClimateMode mode) noexcept;
-        static constexpr fujitsu_halcyon_controller::FanSpeedEnum climate_fan_mode_to_fan_speed(climate::ClimateFanMode fan_speed) noexcept;
+        static constexpr fujitsu_general::airstage::h::ModeEnum climate_mode_to_mode(climate::ClimateMode mode) noexcept;
+        static constexpr fujitsu_general::airstage::h::FanSpeedEnum climate_fan_mode_to_fan_speed(climate::ClimateFanMode fan_speed) noexcept;
         static constexpr std::pair<bool, bool> climate_swing_mode_to_swing_mode(climate::ClimateSwingMode swing_mode) noexcept;
 
         static constexpr uint8_t uart_data_bits_to_uart_config_data_bits(uart_word_length_t bits) noexcept;
@@ -112,5 +107,4 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         static constexpr uart::UARTParityOptions uart_parity_to_uart_config_parity(uart_parity_t parity) noexcept;
 };
 
-}
 }

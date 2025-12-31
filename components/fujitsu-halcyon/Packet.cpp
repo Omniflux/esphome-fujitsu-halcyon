@@ -1,6 +1,8 @@
+#include <cmath>
+
 #include "Packet.h"
 
-namespace fujitsu_halcyon_controller {
+namespace fujitsu_general::airstage::h {
 
 Packet::Packet(Buffer buffer) {
     auto getField = [&buffer](const ByteMaskShiftData& bms) -> uint8_t {
@@ -33,13 +35,16 @@ Packet::Packet(Buffer buffer) {
                 this->Config.IndoorUnit.Lock.ResetFilterTimer = getField(BMS.Config.IndoorUnit.Lock.ResetFilterTimer);
 
                 this->Config.IndoorUnit.FilterTimerExpired = getField(BMS.Config.IndoorUnit.FilterTimerExpired);
+
+                this->Config.IndoorUnit.UnknownFlags = getField(BMS.Config.IndoorUnit.UnknownFlags);
             } else {
                 this->Config.Controller.Write = getField(BMS.Config.Controller.Write);
 
                 this->Config.Controller.AdvanceVerticalLouver = getField(BMS.Config.Controller.AdvanceVerticalLouver);
                 this->Config.Controller.AdvanceHorizontalLouver = getField(BMS.Config.Controller.AdvanceHorizontalLouver);
 
-                this->Config.Controller.Temperature = getField(BMS.Config.Controller.Temperature);
+                auto temperature = getField(BMS.Config.Controller.Temperature);
+                this->Config.Controller.Temperature = (temperature >> 1) + (temperature & 1) / 2.0;
                 this->Config.Controller.UseControllerSensor = getField(BMS.Config.Controller.UseControllerSensor);
 
                 this->Config.Controller.Maintenance = getField(BMS.Config.Controller.Maintenance);
@@ -163,6 +168,7 @@ Packet::Buffer Packet::to_buffer() const {
 
                 setField(BMS.Config.IndoorUnit.FilterTimerExpired, this->Config.IndoorUnit.FilterTimerExpired);
 
+                // setField(BMS.Config.IndoorUnit.UnknownFlags, this->Config.IndoorUnit.UnknownFlags);
                 buffer[5] |= 0b10100000; // Unknown bits set in all captured config packets from indoor unit
                 buffer[7] |= 0b00100000; // Unknown bit set in all captured config packets from indoor unit
             } else {
@@ -171,12 +177,16 @@ Packet::Buffer Packet::to_buffer() const {
                 setField(BMS.Config.Controller.AdvanceVerticalLouver, this->Config.Controller.AdvanceVerticalLouver);
                 setField(BMS.Config.Controller.AdvanceHorizontalLouver, this->Config.Controller.AdvanceHorizontalLouver);
 
-                setField(BMS.Config.Controller.Temperature, this->Config.Controller.Temperature);
+                setField(BMS.Config.Controller.Temperature,
+                    (int(this->Config.Controller.Temperature) << 1) +
+                    int(std::fmod(std::round(this->Config.Controller.Temperature * 2), 2))
+                );
+
                 setField(BMS.Config.Controller.UseControllerSensor, this->Config.Controller.UseControllerSensor);
                 setField(BMS.Config.Controller.Maintenance, this->Config.Controller.Maintenance);
                 setField(BMS.Config.Controller.ResetFilterTimer, this->Config.Controller.ResetFilterTimer);
 
-                if (this->SourceAddress != PrimaryControllerAddress)
+                if (this->SourceAddress != PrimaryAddress)
                     buffer[5] |= 0b00100000; // Unknown bit set in all captured config packets from secondary controller
             }
 

@@ -8,9 +8,9 @@
 #include <esphome/core/log.h>
 using esphome::esp_log_printf_;
 
-namespace fujitsu_halcyon_controller {
+namespace fujitsu_general::airstage::h {
 
-static const char* TAG = "fujitsu_halcyon_controller::Controller";
+static const char* TAG = "fujitsu_general::airstage::h::Controller";
 
 bool Controller::start() {
     int err;
@@ -31,7 +31,8 @@ bool Controller::start() {
     }
 
     if (!uart_is_driver_installed(this->uart_num)) {
-        err = uart_driver_install(this->uart_num, UART_FIFO_LEN * 2, UART_FIFO_LEN * 2, queue_size, &this->uart_event_queue, intr_alloc_flags);
+        const auto buffer_size = UART_HW_FIFO_LEN(this->uart_num) * 2;
+        err = uart_driver_install(this->uart_num, buffer_size, buffer_size, queue_size, &this->uart_event_queue, intr_alloc_flags);
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "Failed to install UART driver: %s", esp_err_to_name(err));
             return false;
@@ -50,10 +51,15 @@ bool Controller::start() {
         return false;
     }
 
-    // If we wait for default timeout (time to transmit 10 characters at 500bps),
-    // the transmit window is over before processing even begins.
-    // Protocol inter packet spacing is about 45ms, time to transmit two bytes
-    // + processing is also about 45ms
+    // Ensure large enough not to trigger mid frame, resynchronize from rx_timeout instead
+    err = uart_set_rx_full_threshold(this->uart_num, Packet::FrameSize * 4);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set UART RX full threshold: %s", esp_err_to_name(err));
+        return false;
+    }
+
+    // Default timeout (time to transmit 10 characters at 500bps) is too long
+    // If we wait for default timeout the transmit window is over before processing even begins.
     err = uart_set_rx_timeout(this->uart_num, UARTInterPacketSymbolSpacing);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to set UART RX timeout: %s", esp_err_to_name(err));
@@ -142,6 +148,14 @@ void Controller::uart_write_bytes(const uint8_t *buf, size_t length) {
         ::uart_write_bytes(this->uart_num, buf, length);
 }
 
+void Controller::set_initialization_stage(const InitializationStageEnum stage) {
+    this->initialization_stage = stage;
+
+    // This callback is not deferred; may need to redesign if it causes a delay beyond the transmit window
+    if (this->callbacks.InitializationStage)
+        callbacks.InitializationStage(stage);
+}
+
 void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnWire) {
     bool error_flag_changed = false;
     std::function<void()> deferred_callback;
@@ -149,20 +163,28 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
     // Parse buffer
     Packet packet(buffer);
 
-    // Finish initialization
+    // Save token destination
     if (this->initialization_stage == InitializationStageEnum::FindNextControllerRx) {
         // Controller with address > configured did not transmit
         if (packet.SourceType != AddressTypeEnum::Controller)
             this->next_token_destination_type = AddressTypeEnum::IndoorUnit;
 
         // Fujitsu RC1 checks for next controller twice (in case of slow booting controller?), but we are only checking once
-        this->initialization_stage = this->features.Zones ? InitializationStageEnum::ZoneRequestActive : InitializationStageEnum::Complete;
+        this->set_initialization_stage(this->features.Zones ? InitializationStageEnum::ZoneRequestActive : InitializationStageEnum::Complete);
     }
 
     // Process packets from Indoor Units
     if (packet.SourceType == AddressTypeEnum::IndoorUnit) {
         switch (packet.Type) {
             [[likely]] case PacketTypeEnum::Config:
+                if (this->initialization_stage == InitializationStageEnum::DetectFeatureSupport) {
+                    if (packet.Config.IndoorUnit.UnknownFlags == 2) { // Guessing this means no feature support among other things
+                        this->features = DefaultFeatures;
+                        this->set_initialization_stage(InitializationStageEnum::FindNextControllerTx);
+                    } else
+                        this->set_initialization_stage(InitializationStageEnum::FeatureRequest);
+                }
+
                 if (this->last_error_flag != packet.Config.IndoorUnit.Error)
                     error_flag_changed = true;
 
@@ -184,11 +206,14 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
 
             case PacketTypeEnum::Features:
                 this->features = packet.Features;
-                this->initialization_stage = this->features.Zones ? InitializationStageEnum::ZoneRequestEnabled : InitializationStageEnum::FindNextControllerTx;
+                this->set_initialization_stage(this->features.Zones ? InitializationStageEnum::ZoneRequestEnabled : InitializationStageEnum::FindNextControllerTx);
                 break;
 
             case PacketTypeEnum::Function:
+                if (this->callbacks.Function)
+                    deferred_callback = [&](){ this->callbacks.Function(packet.Function); };
                 break;
+
             case PacketTypeEnum::Status:
                 break;
 
@@ -196,7 +221,7 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
                 this->current_zone_configuration = packet.ZoneConfig;
 
                 if (this->initialization_stage == InitializationStageEnum::ZoneRequestActive)
-                    this->initialization_stage = InitializationStageEnum::Complete;
+                    this->set_initialization_stage(InitializationStageEnum::Complete);
 
                 if (this->callbacks.ZoneConfig)
                     deferred_callback = [&](){ this->callbacks.ZoneConfig(this->current_zone_configuration); };
@@ -206,7 +231,7 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
                 this->zones = packet.ZoneFunction.IndoorUnit;
 
                 if (this->initialization_stage == InitializationStageEnum::ZoneRequestEnabled)
-                    this->initialization_stage = InitializationStageEnum::FindNextControllerTx;
+                    this->set_initialization_stage(InitializationStageEnum::FindNextControllerTx);
                 break;
         }
     } else {
@@ -229,10 +254,9 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
 
         if (this->initialization_stage == InitializationStageEnum::FindNextControllerTx) {
             this->next_token_destination_type = AddressTypeEnum::Controller;
-            this->initialization_stage = InitializationStageEnum::FindNextControllerRx;
+            this->set_initialization_stage(InitializationStageEnum::FindNextControllerRx);
         }
 
-        // Next dest is always IU1 if tx packet is FUNCTION, but we have no support for tx FUNCTION at this time
         tx_packet.TokenDestinationType = this->next_token_destination_type;
         tx_packet.TokenDestinationAddress = this->next_token_destination_type == AddressTypeEnum::Controller ? this->controller_address + 1 : 1;
 
@@ -246,21 +270,25 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
                  (packet.Type == PacketTypeEnum::Error && !this->is_primary_controller()))
             tx_packet.Type = PacketTypeEnum::Error;
         else if (this->zone_configuration_changes.any()) {
-                tx_packet.Type = PacketTypeEnum::ZoneConfig;
-                tx_packet.ZoneConfig = this->current_zone_configuration;
-                tx_packet.ZoneConfig.Controller.Write = true;
+            tx_packet.Type = PacketTypeEnum::ZoneConfig;
+            tx_packet.ZoneConfig = this->current_zone_configuration;
+            tx_packet.ZoneConfig.Controller.Write = true;
 
-                for (size_t i = ZoneSettableFields::Zone1Active; i <= ZoneSettableFields::Zone8Active; i++)
-                    if (this->zone_configuration_changes[i])
-                        tx_packet.ZoneConfig.ActiveZones[i] = this->changed_zone_configuration.ActiveZones[i];
+            for (size_t i = ZoneSettableFields::Zone1Active; i <= ZoneSettableFields::Zone8Active; i++)
+                if (this->zone_configuration_changes[i])
+                    tx_packet.ZoneConfig.ActiveZones[i] = this->changed_zone_configuration.ActiveZones[i];
 
-                if (this->zone_configuration_changes[ZoneSettableFields::ZoneGroupDayActive])
-                    tx_packet.ZoneConfig.ActiveZoneGroups.Day = this->changed_zone_configuration.ActiveZoneGroups.Day;
+            if (this->zone_configuration_changes[ZoneSettableFields::ZoneGroupDayActive])
+                tx_packet.ZoneConfig.ActiveZoneGroups.Day = this->changed_zone_configuration.ActiveZoneGroups.Day;
 
-                if (this->zone_configuration_changes[ZoneSettableFields::ZoneGroupNightActive])
-                    tx_packet.ZoneConfig.ActiveZoneGroups.Night = this->changed_zone_configuration.ActiveZoneGroups.Night;
+            if (this->zone_configuration_changes[ZoneSettableFields::ZoneGroupNightActive])
+                tx_packet.ZoneConfig.ActiveZoneGroups.Night = this->changed_zone_configuration.ActiveZoneGroups.Night;
 
-                this->zone_configuration_changes.reset();
+            this->zone_configuration_changes.reset();
+        } else if (!this->function_queue.empty()) {
+            tx_packet.Type = PacketTypeEnum::Function;
+            tx_packet.Function = this->function_queue.front();
+            this->function_queue.pop();
         } else {
             // First CONFIG packet sent from Fujitsu controller has write flag set, but we do not restore state at this time
             tx_packet.Type = PacketTypeEnum::Config;
@@ -339,7 +367,7 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
 
 void Controller::set_current_temperature(float temperature) {
     this->changed_configuration.Controller.Temperature = std::clamp(std::isfinite(temperature) ? temperature : 0, MinTemperature, MaxTemperature);
-    this->configuration_changes[SettableFields::Temperature] = true;
+    // Do not set configuration_changed flag - does not require write bit set
 }
 
 bool Controller::set_enabled(bool enabled, bool ignore_lock) {
@@ -509,7 +537,7 @@ bool Controller::use_sensor(bool use_sensor, bool ignore_lock) {
         return false;
 
     this->changed_configuration.Controller.UseControllerSensor = use_sensor;
-    this->configuration_changes[SettableFields::UseControllerSensor] = true;
+    // Do not set configuration_changed flag - does not require write bit set
     return true;
 }
 

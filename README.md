@@ -88,7 +88,7 @@ climate:
   - platform: fujitsu-halcyon
     name: None
     controller_address: 1
-    temperature_sensor_id: my_temp_sensor
+    temperature_sensor_id: my_temperature_sensor
     humidity_sensor: my_humidity_sensor
 ```
 
@@ -97,7 +97,9 @@ If your unit supports sensor switching and has had the function settings set app
 Configure TZSP and use Wireshark with [fujitsu-airstage-h-dissector](https://github.com/Omniflux/fujitsu-airstage-h-dissector) to debug / decode the Fujitsu serial protocol.
 
 ## Related projects
-- FOSV's [Fuji-Atom-Interface](https://github.com/FOSV/Fuji-Atom-Interface)
+- FOSV's [Fuji-Atom-Interface](https://github.com/FOSV/Fuji-Atom-Interface) - Open hardware interface compatible with this component
+<!-- -->
+- My [esphome-fujitsu-dmmum](https://github.com/Omniflux/esphome-fujitsu-dmmum) - Fujitsu AirStage-H 3-wire Central Controller component for ESPHome
 <!-- -->
 - Aaron Zhang's [esphome-fujitsu](https://github.com/FujiHeatPump/esphome-fujitsu)
 - Jaroslaw Przybylowicz's [fuji-iot](https://github.com/jaroslawprzybylowicz/fuji-iot)

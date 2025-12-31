@@ -7,10 +7,11 @@
 #include <cstdint>
 #include <limits>
 
-namespace fujitsu_halcyon_controller {
+namespace fujitsu_general::airstage::h {
 
-constexpr uint8_t PrimaryControllerAddress = 0;
-constexpr uint8_t MaximumZones = 8; // Excludes Common/Constant Zone
+constexpr uint8_t PrimaryAddress = 0;
+constexpr uint8_t MaxAddress = 15;
+constexpr uint8_t MaxZone = 8; // Excludes Common/Constant Zone
 
 enum class AddressTypeEnum : uint8_t {
     IndoorUnit,
@@ -61,10 +62,12 @@ struct Config {
         bool StandbyMode;
         bool Error;
         bool FilterTimerExpired;
+
+        uint8_t UnknownFlags;
     } IndoorUnit;
 
     struct {
-        uint8_t Temperature;
+        float Temperature;
         bool Write;
         bool UseControllerSensor;
         bool AdvanceHorizontalLouver;
@@ -130,7 +133,7 @@ struct ZoneConfig {
         bool Write;
     } Controller;
 
-    std::bitset<MaximumZones> ActiveZones;
+    std::bitset<MaxZone> ActiveZones;
 
     struct {
         bool Day;
@@ -138,15 +141,15 @@ struct ZoneConfig {
     } ActiveZoneGroups;
 
     struct {
-        std::bitset<MaximumZones> Day;
-        std::bitset<MaximumZones> Night;
+        std::bitset<MaxZone> Day;
+        std::bitset<MaxZone> Night;
     } ZoneGroupAssociations;
 };
 
 struct ZoneFunction {
-    struct {
+    struct Zones {
         bool ZoneCommon;
-        std::bitset<MaximumZones> EnabledZones;
+        std::bitset<MaxZone> EnabledZones;
     } IndoorUnit;
 
     struct {
@@ -191,6 +194,7 @@ constexpr struct BMS {
 
             constexpr static auto StandbyMode             = ByteMaskShiftData(2, 0b00001000);
             constexpr static auto Error                   = ByteMaskShiftData(3, 0b10000000);
+            constexpr static auto UnknownFlags            = ByteMaskShiftData(5, 0b11100000);
             constexpr static auto FilterTimerExpired      = ByteMaskShiftData(7, 0b01000000);
         } IndoorUnit = {};
 
@@ -199,7 +203,7 @@ constexpr struct BMS {
             constexpr static auto UseControllerSensor     = ByteMaskShiftData(5, 0b10000000);
             constexpr static auto AdvanceHorizontalLouver = ByteMaskShiftData(5, 0b00001000);
             constexpr static auto AdvanceVerticalLouver   = ByteMaskShiftData(5, 0b00000010);
-            constexpr static auto Temperature             = ByteMaskShiftData(6, 0b01111110);
+            constexpr static auto Temperature             = ByteMaskShiftData(6, 0b01111111);
             constexpr static auto ResetFilterTimer        = ByteMaskShiftData(7, 0b01000000);
             constexpr static auto Maintenance             = ByteMaskShiftData(7, 0b00100000);
         } Controller = {};
@@ -318,7 +322,7 @@ class Packet {
     private:
         // std::bit_compress/std::bit_expand have been proposed for c++ STL (P3104), but are not available now so use these instead
         template<std::unsigned_integral T>
-        constexpr static T extract_bits(const T input, const bool odd) {
+        [[nodiscard]] constexpr static T extract_bits(const T input, const bool odd) noexcept {
             T output = 0;
             for (size_t i = 0, j = 0; i < std::numeric_limits<T>::digits; i++)
                 if (i % 2 == odd)
@@ -327,7 +331,7 @@ class Packet {
         };
 
         template<std::unsigned_integral T>
-        constexpr static T interleave_bits(const T input, const bool odd) {
+        [[nodiscard]] constexpr static T interleave_bits(const T input, const bool odd) noexcept {
             T output = 0;
             for (size_t i = 0, j = 0; i < std::numeric_limits<T>::digits; i++)
                 if (i % 2 == odd)

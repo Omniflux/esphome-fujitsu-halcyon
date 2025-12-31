@@ -99,7 +99,7 @@ Configure TZSP and use Wireshark with [fujitsu-airstage-h-dissector](https://git
 ## Related projects
 - FOSV's [Fuji-Atom-Interface](https://github.com/FOSV/Fuji-Atom-Interface) - Open hardware interface compatible with this component
 <!-- -->
-- My [esphome-fujitsu-halcyon](https://github.com/Omniflux/esphome-fujitsu-dmmum) - Fujitsu AirStage-H 3-wire Central Controller component for ESPHome
+- My [esphome-fujitsu-dmmum](https://github.com/Omniflux/esphome-fujitsu-dmmum) - Fujitsu AirStage-H 3-wire Central Controller component for ESPHome
 <!-- -->
 - Aaron Zhang's [esphome-fujitsu](https://github.com/FujiHeatPump/esphome-fujitsu)
 - Jaroslaw Przybylowicz's [fuji-iot](https://github.com/jaroslawprzybylowicz/fuji-iot)

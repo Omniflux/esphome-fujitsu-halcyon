@@ -13,6 +13,7 @@ namespace fujitsu_general::airstage::h {
 static const char* TAG = "fujitsu_general::airstage::h::Controller";
 
 bool Controller::start() {
+#if defined(ESP32)
     int err;
     auto uart_config = UARTConfig;
     constexpr int intr_alloc_flags = 0;
@@ -69,8 +70,15 @@ bool Controller::start() {
     xTaskCreate([](void* o){ static_cast<Controller*>(o)->uart_event_task(); }, "UART_Event", stack_depth, this, task_priority, NULL);
 
     return true;
+#else
+    if (this->callbacks.ReadBytes == nullptr || this->callbacks.WriteBytes == nullptr) {
+        ESP_LOGW(TAG, "UART callbacks not set; ESP8266 polling is required for UART handling.");
+    }
+    return true;
+#endif
 }
 
+#if defined(ESP32)
 void Controller::uart_event_task() {
     uart_event_t event;
 
@@ -133,19 +141,30 @@ void Controller::uart_event_task() {
         }   
     }
 }
+#endif
 
 void Controller::uart_read_bytes(uint8_t *buf, size_t length) {
     if (this->callbacks.ReadBytes)
         callbacks.ReadBytes(buf, length);
+#if defined(ESP32)
     else
         ::uart_read_bytes(this->uart_num, buf, length, portMAX_DELAY);
+#else
+    else
+        ESP_LOGW(TAG, "UART read requested without a callback on non-ESP32.");
+#endif
 }
 
 void Controller::uart_write_bytes(const uint8_t *buf, size_t length) {
     if (this->callbacks.WriteBytes)
         callbacks.WriteBytes(buf, length);
+#if defined(ESP32)
     else
         ::uart_write_bytes(this->uart_num, buf, length);
+#else
+    else
+        ESP_LOGW(TAG, "UART write requested without a callback on non-ESP32.");
+#endif
 }
 
 void Controller::set_initialization_stage(const InitializationStageEnum stage) {

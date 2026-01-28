@@ -1,6 +1,10 @@
 #include "esphome-fujitsu-halcyon.h"
 
+#include <algorithm>
 #include <array>
+#include <deque>
+#include <unordered_map>
+#include <vector>
 
 #include <esphome/core/helpers.h>
 #include <esphome/core/version.h>
@@ -11,9 +15,31 @@ static const auto TAG = "esphome::fujitsu_general_airstage_h_controller";
 
 constexpr std::array ControllerName = { "Primary", "Secondary", "Undocumented" };
 
+namespace {
+static constexpr size_t kFrameLen = 8;
+static constexpr uint32_t kCharTimeUs = 22000;
+static constexpr uint32_t kWireIdleUs = 3 * kCharTimeUs;
+
+struct Esp8266WireState {
+    std::deque<std::array<uint8_t, kFrameLen>> pending_frames{};
+    uint32_t last_rx_us{0};
+};
+
+static std::unordered_map<const FujitsuHalcyonController*, Esp8266WireState> g_8266_state;
+} // namespace
+
 void FujitsuHalcyonController::setup() {
+    uint8_t uart_num = 0;
+    UartEventQueueHandle uart_event_queue = nullptr;
+
+#if defined(ESP32)
+    auto *idf_parent = static_cast<uart::IDFUARTComponent*>(this->parent_);
+    uart_num = idf_parent->get_hw_serial_number();
+    uart_event_queue = *idf_parent->get_uart_event_queue();
+#endif
+
     this->controller = new fujitsu_general::airstage::h::Controller(
-        static_cast<uart::IDFUARTComponent*>(this->parent_)->get_hw_serial_number(),
+        uart_num,
         this->controller_address_,
         {
             .Config = [this](const fujitsu_general::airstage::h::Config& data){ this->update_from_device(data); },
@@ -21,7 +47,9 @@ void FujitsuHalcyonController::setup() {
             .Function = [this](const fujitsu_general::airstage::h::Function& data){ this->update_from_device(data); },
             .ControllerConfig = [this](const uint8_t address, const fujitsu_general::airstage::h::Config& data){ this->update_from_controller(address, data); },
             .InitializationStage = [this](const fujitsu_general::airstage::h::InitializationStageEnum stage){
-                this->initialization_sensor->publish_state(str_sprintf("(%d/%d)", stage, fujitsu_general::airstage::h::InitializationStageEnum::Complete));
+                this->initialization_sensor->publish_state(
+                    str_sprintf("(%d/%d)", static_cast<int>(stage),
+                                static_cast<int>(fujitsu_general::airstage::h::InitializationStageEnum::Complete)));
             },
             .ReadBytes  = [this](uint8_t *buf, size_t length){
                 this->read_array(buf, length);
@@ -29,10 +57,13 @@ void FujitsuHalcyonController::setup() {
             },
             .WriteBytes = [this](const uint8_t *buf, size_t length){
                 this->write_array(buf, length);
+#if !defined(ESP32)
+                this->flush();
+#endif
                 this->log_buffer("TX", buf, length);
             }
         },
-        *static_cast<uart::IDFUARTComponent*>(this->parent_)->get_uart_event_queue()
+        uart_event_queue
     );
 
     if (!this->controller->start()) {
@@ -98,12 +129,62 @@ void FujitsuHalcyonController::setup() {
 */
 }
 
+#if !defined(ESP32)
+void FujitsuHalcyonController::loop() {
+    if (this->controller == nullptr) {
+        return;
+    }
+
+    auto &st = g_8266_state[this];
+
+    while (this->available() > 0) {
+        const size_t chunk = std::min(static_cast<size_t>(this->available()),
+                                      this->rx_buffer_.size() - this->rx_offset_);
+        if (chunk == 0) {
+            break;
+        }
+
+        this->read_array(this->rx_buffer_.data() + this->rx_offset_, chunk);
+        this->rx_offset_ += chunk;
+        st.last_rx_us = micros();
+
+        if (this->rx_offset_ == this->rx_buffer_.size()) {
+            this->log_buffer("RX", this->rx_buffer_.data(), this->rx_buffer_.size());
+            st.pending_frames.push_back(this->rx_buffer_);
+            this->rx_offset_ = 0;
+            static constexpr size_t kMaxBufferedFrames = 16;
+            if (st.pending_frames.size() > kMaxBufferedFrames) {
+                auto frame = st.pending_frames.front();
+                st.pending_frames.pop_front();
+                this->controller->handle_packet(frame, false);
+            }
+        }
+    }
+
+    if (!st.pending_frames.empty() && st.last_rx_us != 0) {
+        const uint32_t now_us = micros();
+        const uint32_t since_last_us = static_cast<uint32_t>(now_us - st.last_rx_us);
+
+        if (since_last_us >= kWireIdleUs) {
+            while (!st.pending_frames.empty()) {
+                auto frame = st.pending_frames.front();
+                st.pending_frames.pop_front();
+                const bool last = st.pending_frames.empty();
+                this->controller->handle_packet(frame, last);
+            }
+        }
+    }
+}
+#endif
+
 void FujitsuHalcyonController::log_buffer(const char* dir, const uint8_t* buf, size_t length) {
     auto tbuf = std::vector<uint8_t>(buf, buf + length);
     for (auto &b : tbuf)
         b ^= 0xFF;
 
+#if defined(ESP32)
     this->tzsp_send(tbuf);
+#endif
     ESP_LOGD(TAG, "%s: %02hhX %02hhX %02hhX %02hhX %02hhX %02hhX %02hhX %02hhX", dir, tbuf[0], tbuf[1], tbuf[2], tbuf[3], tbuf[4], tbuf[5], tbuf[6], tbuf[7]);
 }
 
@@ -134,14 +215,20 @@ void FujitsuHalcyonController::dump_config() {
     if (!this->use_sensor_switch->is_internal())
         ESP_LOGCONFIG(TAG, "  Use Temperature Sensor: %s", this->use_sensor_switch->state ? "YES" : "NO");
 
+#if defined(ESP32)
     LOG_TZSP("  ", this);
+#endif
 
+#if defined(ESP32)
     this->check_uart_settings(
         fujitsu_general::airstage::h::UARTConfig.baud_rate,
         this->uart_stop_bits_to_uart_config_stop_bits(fujitsu_general::airstage::h::UARTConfig.stop_bits),
         this->uart_parity_to_uart_config_parity(fujitsu_general::airstage::h::UARTConfig.parity),
         this->uart_data_bits_to_uart_config_data_bits(fujitsu_general::airstage::h::UARTConfig.data_bits)
     );
+#else
+    ESP_LOGCONFIG(TAG, "  UART settings check is not available on ESP8266.");
+#endif
 
     this->dump_traits_(TAG);
 }
@@ -441,7 +528,7 @@ constexpr fujitsu_general::airstage::h::ModeEnum FujitsuHalcyonController::clima
         // Should not get to this point if traits is respected
         default: return FujitsuMode::Fan;
     }
-} 
+}
 
 constexpr fujitsu_general::airstage::h::FanSpeedEnum FujitsuHalcyonController::climate_fan_mode_to_fan_speed(climate::ClimateFanMode fan_speed) {
     using climate::ClimateFanMode;
@@ -474,6 +561,7 @@ constexpr std::pair<bool, bool> FujitsuHalcyonController::climate_swing_mode_to_
     }
 }
 
+#if defined(ESP32)
 constexpr uint8_t FujitsuHalcyonController::uart_data_bits_to_uart_config_data_bits(uart_word_length_t bits) {
     switch (bits) {
         case UART_DATA_5_BITS: return 5;
@@ -501,5 +589,6 @@ constexpr uart::UARTParityOptions FujitsuHalcyonController::uart_parity_to_uart_
         default:                return uart::UART_CONFIG_PARITY_NONE;
     }
 }
+#endif
 
 }

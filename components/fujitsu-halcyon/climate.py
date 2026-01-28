@@ -9,9 +9,9 @@ from esphome.components import (
     sensor,
     switch,
     text_sensor,
-    tzsp,
     uart
 )
+from esphome.core import CORE
 
 from esphome.const import (
     CONF_ID,
@@ -29,8 +29,16 @@ from esphome.const import (
 )
 
 CODEOWNERS = ["@Omniflux"]
-DEPENDENCIES = ["tzsp", "uart"]
-AUTO_LOAD = ["binary_sensor", "button", "climate", "number", "sensor", "switch", "text_sensor", "tzsp"]
+USE_TZSP = CORE.is_esp32
+if USE_TZSP:
+    from esphome.components import tzsp
+    DEPENDENCIES = ["tzsp", "uart"]
+    AUTO_LOAD = ["binary_sensor", "button", "climate", "number", "sensor", "switch", "text_sensor", "tzsp"]
+    TZSP_SCHEMA = tzsp.TZSP_SENDER_SCHEMA
+else:
+    DEPENDENCIES = ["uart"]
+    AUTO_LOAD = ["binary_sensor", "button", "climate", "number", "sensor", "switch", "text_sensor"]
+    TZSP_SCHEMA = cv.Schema({})
 
 CONF_CONTROLLER_ADDRESS = "controller_address"
 CONF_TEMPERATURE_CONTROLLER_ADDRESS = "temperature_controller_address"
@@ -142,7 +150,7 @@ CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
             entity_category=ENTITY_CATEGORY_CONFIG,
         )
     }
-).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA).extend(tzsp.TZSP_SENDER_SCHEMA)
+).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA).extend(TZSP_SCHEMA)
 
 FINAL_VALIDATE_SCHEMA = uart.final_validate_device_schema(
     "fujitsu_halcyon",
@@ -157,7 +165,8 @@ FINAL_VALIDATE_SCHEMA = uart.final_validate_device_schema(
 async def to_code(config):
     var = await climate.new_climate(config, await cg.get_variable(config[uart.CONF_UART_ID]), config[CONF_CONTROLLER_ADDRESS])
     await cg.register_component(var, config)
-    await tzsp.register_tzsp_sender(var, config)
+    if USE_TZSP:
+        await tzsp.register_tzsp_sender(var, config)
     await uart.register_uart_device(var, config)
 
     cg.add(var.set_temperature_controller_address(config[CONF_TEMPERATURE_CONTROLLER_ADDRESS]))

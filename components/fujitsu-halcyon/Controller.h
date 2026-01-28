@@ -1,17 +1,49 @@
 #pragma once
 
 #include <bitset>
+#include <cstdint>
 #include <functional>
 #include <queue>
 
+#if defined(ESP32)
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 #include <driver/uart.h>
+using UartEventQueueHandle = QueueHandle_t;
+#else
+#ifdef UART_DATA_8_BITS
+#undef UART_DATA_8_BITS
+#endif
+#ifdef UART_PARITY_EVEN
+#undef UART_PARITY_EVEN
+#endif
+#ifdef UART_STOP_BITS_1
+#undef UART_STOP_BITS_1
+#endif
+using UBaseType_t = uint32_t;
+using uart_port_t = uint8_t;
+using uart_word_length_t = uint8_t;
+using uart_stop_bits_t = uint8_t;
+using uart_parity_t = uint8_t;
+struct uart_config_t {
+    int baud_rate;
+    uart_word_length_t data_bits;
+    uart_parity_t parity;
+    uart_stop_bits_t stop_bits;
+};
+constexpr uart_word_length_t UART_DATA_8_BITS = 8;
+constexpr uart_parity_t UART_PARITY_EVEN = 2;
+constexpr uart_stop_bits_t UART_STOP_BITS_1 = 1;
+constexpr int UART_HW_FLOWCTRL_DISABLE = 0;
+constexpr int UART_SCLK_DEFAULT = 0;
+using UartEventQueueHandle = void*;
+#endif
 
 #include "Packet.h"
 
 namespace fujitsu_general::airstage::h {
 
+#if defined(ESP32)
 constexpr uart_config_t UARTConfig = {
         .baud_rate = 500,
         .data_bits = UART_DATA_8_BITS,
@@ -21,6 +53,14 @@ constexpr uart_config_t UARTConfig = {
         .rx_flow_ctrl_thresh = 0,
         .source_clk = UART_SCLK_DEFAULT,
 };
+#else
+constexpr uart_config_t UARTConfig = {
+        .baud_rate = 500,
+        .data_bits = UART_DATA_8_BITS,
+        .parity    = UART_PARITY_EVEN,
+        .stop_bits = UART_STOP_BITS_1,
+};
+#endif
 
 constexpr uint8_t UARTInterPacketSymbolSpacing = 2;
 
@@ -101,7 +141,7 @@ class Controller {
     };
 
     public:
-        Controller(uint8_t uart_num, uint8_t controller_address, const Callbacks& callbacks, QueueHandle_t uart_event_queue = nullptr)
+        Controller(uint8_t uart_num, uint8_t controller_address, const Callbacks& callbacks, UartEventQueueHandle uart_event_queue = nullptr)
             : uart_num(static_cast<uart_port_t>(uart_num)), controller_address(controller_address), uart_event_queue(uart_event_queue), callbacks(callbacks) {
             this->set_initialization_stage(InitializationStageEnum::DetectFeatureSupport);
         }
@@ -129,6 +169,7 @@ class Controller {
 
         void get_function(uint8_t function, uint8_t unit) { this->function_queue.push({ .Function = function, .Unit = unit }); }
         void set_function(uint8_t function, uint8_t value, uint8_t unit) { this->function_queue.push({ true, function, value, unit }); }
+        void handle_packet(const Packet::Buffer& buffer, bool lastPacketOnWire = true) { this->process_packet(buffer, lastPacketOnWire); }
 
     protected:
         InitializationStageEnum initialization_stage;
@@ -141,7 +182,7 @@ class Controller {
     private:
         uart_port_t uart_num;
         uint8_t controller_address;
-        QueueHandle_t uart_event_queue;
+        UartEventQueueHandle uart_event_queue;
         Callbacks callbacks;
 
         struct Features features = {};
@@ -151,7 +192,9 @@ class Controller {
         std::queue<struct Function> function_queue;
         bool last_error_flag = false; // TODO handle errors for multiple indoor units...multiple errors per IU?
 
+#if defined(ESP32)
         [[noreturn]] void uart_event_task();
+#endif
         void uart_read_bytes(uint8_t *buf, size_t length);
         void uart_write_bytes(const uint8_t *buf, size_t length);
 };

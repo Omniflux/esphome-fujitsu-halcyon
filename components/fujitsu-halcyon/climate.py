@@ -9,9 +9,15 @@ from esphome.components import (
     sensor,
     switch,
     text_sensor,
-    tzsp,
     uart
 )
+
+try:
+    from esphome.components import tzsp
+except ImportError:
+    TZSP_AVAILABLE = False
+else:
+    TZSP_AVAILABLE = True
 
 from esphome.const import (
     CONF_ID,
@@ -28,9 +34,18 @@ from esphome.const import (
     UNIT_CELSIUS
 )
 
+from esphome.types import ConfigType
+
 CODEOWNERS = ["@Omniflux"]
-DEPENDENCIES = ["tzsp", "uart"]
-AUTO_LOAD = ["binary_sensor", "button", "climate", "number", "sensor", "switch", "text_sensor", "tzsp"]
+DEPENDENCIES = ["uart"]
+
+def AUTO_LOAD(config: ConfigType) -> list[str]:
+    load = ["binary_sensor", "button", "climate", "number", "sensor", "switch", "text_sensor"]
+
+    if TZSP_AVAILABLE and config.get(tzsp.CONF_TZSP):
+        load += ["tzsp"]
+
+    return load
 
 CONF_CONTROLLER_ADDRESS = "controller_address"
 CONF_TEMPERATURE_CONTROLLER_ADDRESS = "temperature_controller_address"
@@ -142,7 +157,10 @@ CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
             entity_category=ENTITY_CATEGORY_CONFIG,
         )
     }
-).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA).extend(tzsp.TZSP_SENDER_SCHEMA)
+).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA)
+
+if TZSP_AVAILABLE:
+    CONFIG_SCHEMA = CONFIG_SCHEMA.extend(tzsp.TZSP_SENDER_SCHEMA)
 
 FINAL_VALIDATE_SCHEMA = uart.final_validate_device_schema(
     "fujitsu_halcyon",
@@ -154,11 +172,14 @@ FINAL_VALIDATE_SCHEMA = uart.final_validate_device_schema(
     stop_bits=1
 )
 
-async def to_code(config):
+async def to_code(config: ConfigType) -> None:
     var = await climate.new_climate(config, await cg.get_variable(config[uart.CONF_UART_ID]), config[CONF_CONTROLLER_ADDRESS])
     await cg.register_component(var, config)
-    await tzsp.register_tzsp_sender(var, config)
     await uart.register_uart_device(var, config)
+
+    if TZSP_AVAILABLE and config.get(tzsp.CONF_TZSP):
+        await tzsp.register_tzsp_sender(var, config)
+        cg.add_define("USE_TZSP")
 
     cg.add(var.set_temperature_controller_address(config[CONF_TEMPERATURE_CONTROLLER_ADDRESS]))
     cg.add(var.set_ignore_lock(config[CONF_IGNORE_LOCK]))

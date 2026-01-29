@@ -10,7 +10,9 @@
 #include <esphome/components/uart/uart.h>
 #include <esphome/components/uart/uart_component_esp_idf.h>
 
+#if defined(USE_TZSP)
 #include <esphome/components/tzsp/tzsp.h>
+#endif
 
 #include "esphome-custom-button.h"
 #include "esphome-custom-number.h"
@@ -19,7 +21,11 @@
 
 namespace esphome::fujitsu_general_airstage_h_controller {
 
+#if defined(USE_TZSP)
 class FujitsuHalcyonController : public Component, public climate::Climate, public uart::UARTDevice, public tzsp::TZSPSender {
+#else
+class FujitsuHalcyonController : public Component, public climate::Climate, public uart::UARTDevice {
+#endif
     public:
         binary_sensor::BinarySensor* standby_sensor = new binary_sensor::BinarySensor();
         binary_sensor::BinarySensor* filter_sensor = new binary_sensor::BinarySensor();

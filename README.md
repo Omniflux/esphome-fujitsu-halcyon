@@ -10,7 +10,7 @@ substitutions:
   esp_board: m5stack-atom
 
 external_components:
-  - source: github://Omniflux/esphome-tzsp
+#  - source: github://Omniflux/esphome-tzsp
   - source: github://Omniflux/esphome-fujitsu-halcyon
 
 packages:

@@ -103,7 +103,10 @@ void FujitsuHalcyonController::log_buffer(const char* dir, const uint8_t* buf, s
     for (auto &b : tbuf)
         b ^= 0xFF;
 
+#if defined(USE_TZSP)
     this->tzsp_send(tbuf);
+#endif
+
     ESP_LOGD(TAG, "%s: %02hhX %02hhX %02hhX %02hhX %02hhX %02hhX %02hhX %02hhX", dir, tbuf[0], tbuf[1], tbuf[2], tbuf[3], tbuf[4], tbuf[5], tbuf[6], tbuf[7]);
 }
 
@@ -134,7 +137,9 @@ void FujitsuHalcyonController::dump_config() {
     if (!this->use_sensor_switch->is_internal())
         ESP_LOGCONFIG(TAG, "  Use Temperature Sensor: %s", this->use_sensor_switch->state ? "YES" : "NO");
 
+#if defined(USE_TZSP)
     LOG_TZSP("  ", this);
+#endif
 
     this->check_uart_settings(
         fujitsu_general::airstage::h::UARTConfig.baud_rate,

@@ -63,6 +63,7 @@ CONF_ADVANCE_HORIZONTAL_LOUVER = "advance_horizontal_louver"
 CONF_RESET_FILTER_TIMER = "reset_filter_timer"
 CONF_FILTER_TIMER_EXPIRED = "filter_timer_expired"
 CONF_REINITIALIZE = "reinitialize"
+CONF_CONNECTED = "connected"
 
 CONF_FUNCTION = "function"
 CONF_FUNCTION_VALUE = "function_value"
@@ -155,6 +156,10 @@ CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
         cv.Optional(CONF_REINITIALIZE, default={CONF_NAME: "Reinitialize", CONF_INTERNAL: True}): button.button_schema(
             CustomButton,
             entity_category=ENTITY_CATEGORY_CONFIG,
+        ),
+        cv.Optional(CONF_CONNECTED, default={CONF_NAME: "Connected"}): binary_sensor.binary_sensor_schema(
+            BinarySensor,
+            entity_category=ENTITY_CATEGORY_DIAGNOSTIC
         )
     }
 ).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA)
@@ -221,6 +226,9 @@ async def to_code(config: ConfigType) -> None:
 
     varx = cg.Pvariable(config[CONF_REINITIALIZE][CONF_ID], var.reinitialize_button)
     await button.register_button(varx, config[CONF_REINITIALIZE])
+
+    varx = cg.Pvariable(config[CONF_CONNECTED][CONF_ID], var.connected_sensor)
+    await binary_sensor.register_binary_sensor(varx, config[CONF_CONNECTED])
 
     varx = cg.Pvariable(config[CONF_REMOTE_SENSOR][CONF_ID], var.remote_sensor)
     await sensor.register_sensor(varx, config[CONF_REMOTE_SENSOR])

@@ -27,6 +27,7 @@ from esphome.const import (
     CONF_MODE,
     CONF_NAME,
     DEVICE_CLASS_TEMPERATURE,
+    DEVICE_CLASS_CONNECTIVITY,
     DEVICE_CLASS_PROBLEM,
     ENTITY_CATEGORY_CONFIG,
     ENTITY_CATEGORY_DIAGNOSTIC,
@@ -159,7 +160,8 @@ CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
         ),
         cv.Optional(CONF_CONNECTED, default={CONF_NAME: "Connected"}): binary_sensor.binary_sensor_schema(
             BinarySensor,
-            entity_category=ENTITY_CATEGORY_DIAGNOSTIC
+            entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+            device_class=DEVICE_CLASS_CONNECTIVITY
         )
     }
 ).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA)

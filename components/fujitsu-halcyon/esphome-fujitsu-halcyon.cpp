@@ -148,8 +148,6 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
             this->filter_sensor->publish_state(this->filter_sensor->state);
         this->reset_filter_button->set_internal(false);
     }
-
-    this->reinitialize_button->set_internal(false);
 }
 
 void FujitsuHalcyonController::log_buffer(const char* dir, const uint8_t* buf, size_t length) {

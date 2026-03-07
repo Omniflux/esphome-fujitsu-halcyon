@@ -154,7 +154,7 @@ CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
             entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
             device_class=DEVICE_CLASS_PROBLEM
         ),
-        cv.Optional(CONF_REINITIALIZE, default={CONF_NAME: "Reinitialize", CONF_INTERNAL: True}): button.button_schema(
+        cv.Optional(CONF_REINITIALIZE, default={CONF_NAME: "Reinitialize"}): button.button_schema(
             CustomButton,
             entity_category=ENTITY_CATEGORY_CONFIG,
         ),

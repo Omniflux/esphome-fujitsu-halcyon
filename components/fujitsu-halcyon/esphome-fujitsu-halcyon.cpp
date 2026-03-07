@@ -1,6 +1,7 @@
 #include "esphome-fujitsu-halcyon.h"
 
 #include <array>
+#include <type_traits>
 
 #include <esphome/core/helpers.h>
 #include <esphome/core/version.h>
@@ -21,7 +22,6 @@ void FujitsuHalcyonController::setup() {
             .Function = [this](const fujitsu_general::airstage::h::Function& data){ this->update_from_device(data); },
             .ControllerConfig = [this](const uint8_t address, const fujitsu_general::airstage::h::Config& data){ this->update_from_controller(address, data); },
             .InitializationStage = [this](const fujitsu_general::airstage::h::InitializationStageEnum stage){
-                this->initialization_sensor->publish_state(str_sprintf("(%d/%d)", static_cast<int>(stage), static_cast<int>(fujitsu_general::airstage::h::InitializationStageEnum::Complete)));
                 this->on_initialization_stage(stage);
             },
             .ReadBytes  = [this](uint8_t *buf, size_t length){
@@ -111,6 +111,10 @@ void FujitsuHalcyonController::setup() {
 
 void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::airstage::h::InitializationStageEnum stage) {
     using fujitsu_general::airstage::h::InitializationStageEnum;
+    using stage_t = std::underlying_type_t<InitializationStageEnum>;
+
+    this->initialization_sensor->publish_state(
+        str_sprintf("(%d/%d)", static_cast<stage_t>(stage), static_cast<stage_t>(InitializationStageEnum::Complete)));
 
     bool connected = (stage == InitializationStageEnum::Complete);
 

@@ -1,6 +1,7 @@
 #include "esphome-fujitsu-halcyon.h"
 
 #include <array>
+#include <type_traits>
 
 #include <esphome/core/helpers.h>
 #include <esphome/core/version.h>
@@ -21,7 +22,7 @@ void FujitsuHalcyonController::setup() {
             .Function = [this](const fujitsu_general::airstage::h::Function& data){ this->update_from_device(data); },
             .ControllerConfig = [this](const uint8_t address, const fujitsu_general::airstage::h::Config& data){ this->update_from_controller(address, data); },
             .InitializationStage = [this](const fujitsu_general::airstage::h::InitializationStageEnum stage){
-                this->initialization_sensor->publish_state(str_sprintf("(%d/%d)", stage, fujitsu_general::airstage::h::InitializationStageEnum::Complete));
+                this->on_initialization_stage(stage);
             },
             .ReadBytes  = [this](uint8_t *buf, size_t length){
                 this->read_array(buf, length);
@@ -40,6 +41,8 @@ void FujitsuHalcyonController::setup() {
         this->mark_failed();
         return;
     }
+
+    this->connected_sensor->publish_state(false);
 
     // Use specified sensor for this components reported temperature
     if (this->temperature_sensor_ != nullptr) {
@@ -85,6 +88,14 @@ void FujitsuHalcyonController::setup() {
         this->current_humidity = this->humidity_sensor_->state;
     }
 
+    // Use remote controllers sensor for this components reported temperature if other sensor is not configured
+    if (this->temperature_sensor_ == nullptr) {
+        this->remote_sensor->add_on_raw_state_callback([this](float temperature) {
+            this->current_temperature = temperature;
+            this->publish_state();
+        });
+    }
+
 /*
     // Not sure if should timeout, or wait forever.
     // Not sure if getting stuck at can_proceed() causes boot failure count to increment
@@ -96,6 +107,47 @@ void FujitsuHalcyonController::setup() {
         }
     });
 */
+}
+
+void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::airstage::h::InitializationStageEnum stage) {
+    using fujitsu_general::airstage::h::InitializationStageEnum;
+    using stage_t = std::underlying_type_t<InitializationStageEnum>;
+
+    this->initialization_sensor->publish_state(
+        str_sprintf("(%d/%d)", static_cast<stage_t>(stage), static_cast<stage_t>(InitializationStageEnum::Complete)));
+
+    bool connected = (stage == InitializationStageEnum::Complete);
+
+    // Update connected sensor
+    if (!this->connected_sensor->has_state() || connected != this->connected_sensor->state)
+        this->connected_sensor->publish_state(connected);
+
+    if (!connected)
+        return;
+
+    // Expose feature dependent entities now that features are known,
+    // and force a state publish so HA discovers them even if ListEntities already ran
+    auto features = this->controller->get_features();
+
+    if (features.SensorSwitching && this->temperature_sensor_ != nullptr) {
+        this->use_sensor_switch->set_internal(false);
+        this->use_sensor_switch->publish_state(this->use_sensor_switch->state);
+    }
+
+    if (features.VerticalLouvers) {
+        this->advance_vertical_louver_button->set_internal(false);
+    }
+
+    if (features.HorizontalLouvers) {
+        this->advance_horizontal_louver_button->set_internal(false);
+    }
+
+    if (features.FilterTimer) {
+        this->filter_sensor->set_internal(false);
+        if (this->filter_sensor->has_state())
+            this->filter_sensor->publish_state(this->filter_sensor->state);
+        this->reset_filter_button->set_internal(false);
+    }
 }
 
 void FujitsuHalcyonController::log_buffer(const char* dir, const uint8_t* buf, size_t length) {
@@ -219,20 +271,6 @@ climate::ClimateTraits FujitsuHalcyonController::traits() {
         if (features.HorizontalLouvers && features.VerticalLouvers)
             traits.add_supported_swing_mode(ClimateSwingMode::CLIMATE_SWING_BOTH);
     }
-
-    // Expose feature dependent components
-    if (features.SensorSwitching && this->temperature_sensor_ != nullptr)
-        this->use_sensor_switch->set_internal(false);
-    if (features.HorizontalLouvers)
-        this->advance_vertical_louver_button->set_internal(false);
-    if (features.VerticalLouvers)
-        this->advance_horizontal_louver_button->set_internal(false);
-    if (features.FilterTimer) {
-        this->filter_sensor->set_internal(false);
-        this->reset_filter_button->set_internal(false);
-    }
-
-    this->reinitialize_button->set_internal(false);
 
     return traits;
 }
@@ -368,18 +406,9 @@ void FujitsuHalcyonController::update_from_device(const fujitsu_general::airstag
 
 void FujitsuHalcyonController::update_from_controller(const uint8_t address, const fujitsu_general::airstage::h::Config& data) {
     if (address == this->temperature_controller_address_ && data.Controller.Temperature) {
-        // Make remote controllers sensor visible
-        if (this->remote_sensor->is_internal()) {
+        // Make remote controllers sensor visible on first data received
+        if (this->remote_sensor->is_internal())
             this->remote_sensor->set_internal(false);
-
-            // Use remote controllers sensor for this components reported temperature if other sensor is not configured
-            if (this->temperature_sensor_ == nullptr) {
-                this->remote_sensor->add_on_raw_state_callback([this](float temperature) {
-                    this->current_temperature = temperature;
-                    this->publish_state();
-                });
-            }
-        }
 
         // Update remote controllers sensor component with remote controllers reported temperature
         if (data.Controller.Temperature != this->remote_sensor->raw_state)

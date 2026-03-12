@@ -30,6 +30,7 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         binary_sensor::BinarySensor* standby_sensor = new binary_sensor::BinarySensor();
         binary_sensor::BinarySensor* filter_sensor = new binary_sensor::BinarySensor();
         binary_sensor::BinarySensor* error_sensor = new binary_sensor::BinarySensor();
+        binary_sensor::BinarySensor* connected_sensor = new binary_sensor::BinarySensor();
         text_sensor::TextSensor* error_code_sensor = new text_sensor::TextSensor();
         text_sensor::TextSensor* initialization_sensor = new text_sensor::TextSensor();
         sensor::Sensor* remote_sensor = new sensor::Sensor();
@@ -83,6 +84,7 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         void update_from_device(const fujitsu_general::airstage::h::Packet& data);
         void update_from_device(const fujitsu_general::airstage::h::Function& data);
         void update_from_controller(const uint8_t address, const fujitsu_general::airstage::h::Config& data);
+        void on_initialization_stage(const fujitsu_general::airstage::h::InitializationStageEnum stage);
 
         void log_buffer(const char* dir, const uint8_t* buf, size_t length);
 

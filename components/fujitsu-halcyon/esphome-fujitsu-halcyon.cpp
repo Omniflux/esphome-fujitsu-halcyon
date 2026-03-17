@@ -33,7 +33,7 @@ void FujitsuHalcyonController::setup() {
                 this->log_buffer("TX", buf, length);
             }
         },
-        *static_cast<uart::IDFUARTComponent*>(this->parent_)->get_uart_event_queue()
+        static_cast<uart::IDFUARTComponent*>(this->parent_)->get_hw_serial()->get_event_queue()
     );
 
     if (!this->controller->start()) {

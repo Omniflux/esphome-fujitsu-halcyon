@@ -188,7 +188,8 @@ async def to_code(config: ConfigType) -> None:
         await tzsp.register_tzsp_sender(var, config)
         cg.add_define("USE_TZSP")
 
-    uart.request_wake_loop_on_rx()
+    if cv.parse_esphome_version() < (2026, 3, 0) and cv.parse_esphome_version() >= (2025, 12, 0):
+        uart.request_wake_loop_on_rx()
 
     cg.add(var.set_temperature_controller_address(config[CONF_TEMPERATURE_CONTROLLER_ADDRESS]))
     cg.add(var.set_ignore_lock(config[CONF_IGNORE_LOCK]))

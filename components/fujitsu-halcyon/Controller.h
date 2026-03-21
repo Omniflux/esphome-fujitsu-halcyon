@@ -13,13 +13,13 @@
 namespace fujitsu_general::airstage::h {
 
 constexpr uart_config_t UARTConfig = {
-        .baud_rate = 500,
-        .data_bits = UART_DATA_8_BITS,
-        .parity    = UART_PARITY_EVEN,
-        .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-        .rx_flow_ctrl_thresh = 0,
-        .source_clk = UART_SCLK_DEFAULT,
+    .baud_rate = 500,
+    .data_bits = UART_DATA_8_BITS,
+    .parity    = UART_PARITY_EVEN,
+    .stop_bits = UART_STOP_BITS_1,
+    .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+    .rx_flow_ctrl_thresh = 0,
+    .source_clk = UART_SCLK_DEFAULT,
 };
 
 constexpr uint8_t UARTInterPacketSymbolSpacing = 2;
@@ -31,28 +31,28 @@ constexpr float MinTemperature = 0.0;
 constexpr float MaxTemperature = 60.0;
 
 constexpr Features DefaultFeatures = {
-        .Mode = {
-            .Auto = true,
-            .Heat = true,
-            .Fan = true,
-            .Dry = true,
-            .Cool = true,
-        },
+    .Mode = {
+        .Auto = true,
+        .Heat = true,
+        .Fan = true,
+        .Dry = true,
+        .Cool = true,
+    },
 
-        .FanSpeed = {
-            .Quiet = false,
-            .Low = true,
-            .Medium = true,
-            .High = true,
-            .Auto = true,
-        },
+    .FanSpeed = {
+        .Quiet = false,
+        .Low = true,
+        .Medium = true,
+        .High = true,
+        .Auto = true,
+    },
 
-        .FilterTimer = false,
-        .SensorSwitching = false,
-        .Maintenance = false,
-        .EconomyMode = true,
-        .HorizontalLouvers = false,
-        .VerticalLouvers = false,
+    .FilterTimer = false,
+    .SensorSwitching = false,
+    .Maintenance = false,
+    .EconomyMode = true,
+    .HorizontalLouvers = false,
+    .VerticalLouvers = false,
 };
 
 enum class InitializationStageEnum : uint8_t {

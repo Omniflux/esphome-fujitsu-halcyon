@@ -110,12 +110,12 @@ CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
             CustomButton,
             entity_category=ENTITY_CATEGORY_CONFIG
         ),
-        cv.Optional(CONF_USE_SENSOR, default={CONF_NAME: "Use Sensor", CONF_INTERNAL: True}): switch.switch_schema(
+        cv.Optional(CONF_USE_SENSOR, default={CONF_NAME: "Use Sensor"}): switch.switch_schema(
             CustomSwitch,
             entity_category=ENTITY_CATEGORY_CONFIG,
             default_restore_mode="RESTORE_DEFAULT_OFF"
         ),
-        cv.Optional(CONF_REMOTE_SENSOR, default={CONF_NAME: "Remote Temperature Sensor", CONF_INTERNAL: True}): sensor.sensor_schema(
+        cv.Optional(CONF_REMOTE_SENSOR, default={CONF_NAME: "Remote Temperature Sensor"}): sensor.sensor_schema(
             Sensor,
             unit_of_measurement=UNIT_CELSIUS,
             device_class=DEVICE_CLASS_TEMPERATURE,
@@ -139,17 +139,17 @@ CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
             TextSensor,
             entity_category=ENTITY_CATEGORY_DIAGNOSTIC
         ),
-        cv.Optional(CONF_ADVANCE_VERTICAL_LOUVER, default={CONF_NAME: "Advance Vertical Louver", CONF_INTERNAL: True}): button.button_schema(
+        cv.Optional(CONF_ADVANCE_VERTICAL_LOUVER, default={CONF_NAME: "Advance Vertical Louver"}): button.button_schema(
             CustomButton
         ),
-        cv.Optional(CONF_ADVANCE_HORIZONTAL_LOUVER, default={CONF_NAME: "Advance Horizontal Louver", CONF_INTERNAL: True}): button.button_schema(
+        cv.Optional(CONF_ADVANCE_HORIZONTAL_LOUVER, default={CONF_NAME: "Advance Horizontal Louver"}): button.button_schema(
             CustomButton
         ),
-        cv.Optional(CONF_RESET_FILTER_TIMER, default={CONF_NAME: "Reset Filter Timer", CONF_INTERNAL: True}): button.button_schema(
+        cv.Optional(CONF_RESET_FILTER_TIMER, default={CONF_NAME: "Reset Filter Timer"}): button.button_schema(
             CustomButton,
             entity_category=ENTITY_CATEGORY_CONFIG
         ),
-        cv.Optional(CONF_FILTER_TIMER_EXPIRED, default={CONF_NAME: "Filter Timer Expired", CONF_INTERNAL: True}): binary_sensor.binary_sensor_schema(
+        cv.Optional(CONF_FILTER_TIMER_EXPIRED, default={CONF_NAME: "Filter Timer Expired"}): binary_sensor.binary_sensor_schema(
             BinarySensor,
             entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
             device_class=DEVICE_CLASS_PROBLEM
@@ -187,8 +187,6 @@ async def to_code(config: ConfigType) -> None:
     if TZSP_AVAILABLE and config.get(tzsp.CONF_TZSP):
         await tzsp.register_tzsp_sender(var, config)
         cg.add_define("USE_TZSP")
-
-    uart.request_wake_loop_on_rx()
 
     cg.add(var.set_temperature_controller_address(config[CONF_TEMPERATURE_CONTROLLER_ADDRESS]))
     cg.add(var.set_ignore_lock(config[CONF_IGNORE_LOCK]))

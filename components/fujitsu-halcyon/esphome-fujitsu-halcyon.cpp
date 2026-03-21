@@ -32,8 +32,7 @@ void FujitsuHalcyonController::setup() {
                 this->write_array(buf, length);
                 this->log_buffer("TX", buf, length);
             }
-        },
-        *static_cast<uart::IDFUARTComponent*>(this->parent_)->get_uart_event_queue()
+        }
     );
 
     if (!this->controller->start()) {
@@ -125,28 +124,15 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
     if (!connected)
         return;
 
-    // Expose feature dependent entities now that features are known,
-    // and force a state publish so HA discovers them even if ListEntities already ran
+    // Force a state publish so HA discovers entities even if ListEntities already ran
     auto features = this->controller->get_features();
 
     if (features.SensorSwitching && this->temperature_sensor_ != nullptr) {
-        this->use_sensor_switch->set_internal(false);
         this->use_sensor_switch->publish_state(this->use_sensor_switch->state);
     }
 
-    if (features.VerticalLouvers) {
-        this->advance_vertical_louver_button->set_internal(false);
-    }
-
-    if (features.HorizontalLouvers) {
-        this->advance_horizontal_louver_button->set_internal(false);
-    }
-
-    if (features.FilterTimer) {
-        this->filter_sensor->set_internal(false);
-        if (this->filter_sensor->has_state())
-            this->filter_sensor->publish_state(this->filter_sensor->state);
-        this->reset_filter_button->set_internal(false);
+    if (features.FilterTimer && this->filter_sensor->has_state()) {
+        this->filter_sensor->publish_state(this->filter_sensor->state);
     }
 }
 
@@ -406,10 +392,6 @@ void FujitsuHalcyonController::update_from_device(const fujitsu_general::airstag
 
 void FujitsuHalcyonController::update_from_controller(const uint8_t address, const fujitsu_general::airstage::h::Config& data) {
     if (address == this->temperature_controller_address_ && data.Controller.Temperature) {
-        // Make remote controllers sensor visible on first data received
-        if (this->remote_sensor->is_internal())
-            this->remote_sensor->set_internal(false);
-
         // Update remote controllers sensor component with remote controllers reported temperature
         if (data.Controller.Temperature != this->remote_sensor->raw_state)
             this->remote_sensor->publish_state(data.Controller.Temperature);

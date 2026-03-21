@@ -24,6 +24,9 @@ void FujitsuHalcyonController::setup() {
             .InitializationStage = [this](const fujitsu_general::airstage::h::InitializationStageEnum stage){
                 this->on_initialization_stage(stage);
             },
+            .AvailableBytes = [this]() -> size_t {
+                return this->available();
+            },
             .ReadBytes  = [this](uint8_t *buf, size_t length){
                 this->read_array(buf, length);
                 this->log_buffer("RX", buf, length);

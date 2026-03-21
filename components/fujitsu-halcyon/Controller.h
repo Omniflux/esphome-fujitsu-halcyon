@@ -87,6 +87,7 @@ class Controller {
     using FunctionCallback = std::function<void(const Function&)>;
     using ControllerConfigCallback = std::function<void(const uint8_t address, const Config&)>;
     using InitializationStageCallback = std::function<void(const InitializationStageEnum stage)>;
+    using AvailableBytesCallback = std::function<size_t()>;
     using ReadBytesCallback  = std::function<void(uint8_t *data, size_t len)>;
     using WriteBytesCallback = std::function<void(const uint8_t *data, size_t len)>;
 
@@ -96,6 +97,7 @@ class Controller {
         FunctionCallback Function;
         ControllerConfigCallback ControllerConfig;
         InitializationStageCallback InitializationStage;
+        AvailableBytesCallback AvailableBytes;
         ReadBytesCallback ReadBytes;
         WriteBytesCallback WriteBytes;
     };
@@ -152,6 +154,7 @@ class Controller {
         bool last_error_flag = false; // TODO handle errors for multiple indoor units...multiple errors per IU?
 
         [[noreturn]] void uart_event_task();
+        size_t uart_available_bytes();
         void uart_read_bytes(uint8_t *buf, size_t length);
         void uart_write_bytes(const uint8_t *buf, size_t length);
 };

@@ -82,7 +82,7 @@ void Controller::uart_event_task() {
                     size_t buffer_len;
 
                     // Discard partial frame
-                    uart_get_buffered_data_len(this->uart_num, &buffer_len);
+                    buffer_len = this->uart_available_bytes();
                     if (auto discard = buffer_len % buffer.size()) {
                         this->uart_read_bytes(buffer.data(), discard);
                         ESP_LOGW(TAG, "Discarded %d bytes", discard);
@@ -91,7 +91,7 @@ void Controller::uart_event_task() {
                     // For each frame
                     for (auto i = 0; i < event.size / buffer.size(); i++) {
                         this->uart_read_bytes(buffer.data(), buffer.size());
-                        uart_get_buffered_data_len(this->uart_num, &buffer_len);
+                        buffer_len = this->uart_available_bytes();
                         this->process_packet(buffer, buffer_len == 0 /* Indicates final packet on wire */);
                     }
 
@@ -132,6 +132,17 @@ void Controller::uart_event_task() {
             }
         }   
     }
+}
+
+size_t Controller::uart_available_bytes() {
+    size_t available_bytes;
+
+    if (this->callbacks.AvailableBytes)
+        available_bytes = callbacks.AvailableBytes();
+    else
+        ::uart_get_buffered_data_len(this->uart_num, &available_bytes);
+
+    return available_bytes;
 }
 
 void Controller::uart_read_bytes(uint8_t *buf, size_t length) {

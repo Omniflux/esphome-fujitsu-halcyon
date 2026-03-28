@@ -176,6 +176,12 @@ CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
 if TZSP_AVAILABLE:
     CONFIG_SCHEMA = CONFIG_SCHEMA.extend(tzsp.TZSP_SENDER_SCHEMA)
 
+def check_esphome_version(config):
+    if cv.parse_esphome_version() < (2026, 3, 0):
+        raise cv.Invalid(f"Component {COMPONENT_NAME} requires ESPHome 2026.3.0 or newer.")
+
+    return config
+
 def final_validate_uart_schema(config):
     def validate_rx_full_threshold(value):
         if not isinstance(value, int) or value < PACKET_FRAME_SIZE * 2:
@@ -209,6 +215,7 @@ def final_validate_uart_schema(config):
     return config
 
 FINAL_VALIDATE_SCHEMA = cv.All(
+    check_esphome_version,
     final_validate_uart_schema,
     uart.final_validate_device_schema(
         COMPONENT_NAME,
@@ -229,9 +236,6 @@ async def to_code(config: ConfigType) -> None:
     if TZSP_AVAILABLE and config.get(tzsp.CONF_TZSP):
         await tzsp.register_tzsp_sender(var, config)
         cg.add_define("USE_TZSP")
-
-    if cv.parse_esphome_version() < (2026, 3, 0) and cv.parse_esphome_version() >= (2025, 12, 0):
-        uart.request_wake_loop_on_rx()
 
     cg.add(var.set_temperature_controller_address(config[CONF_TEMPERATURE_CONTROLLER_ADDRESS]))
     cg.add(var.set_ignore_lock(config[CONF_IGNORE_LOCK]))

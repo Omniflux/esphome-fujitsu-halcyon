@@ -414,7 +414,7 @@ void FujitsuHalcyonController::update_from_controller(const uint8_t address, con
             this->remote_sensor->set_internal(false);
 
         // Update remote controllers sensor component with remote controllers reported temperature
-        if (data.Controller.Temperature != this->remote_sensor->raw_state)
+        if (data.Controller.Temperature != this->remote_sensor->get_raw_state())
             this->remote_sensor->publish_state(data.Controller.Temperature);
     }
 }

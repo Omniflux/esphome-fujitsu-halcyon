@@ -12,7 +12,19 @@ static const auto TAG = "esphome::fujitsu_general_airstage_h_controller";
 
 constexpr std::array ControllerName = { "Primary", "Secondary", "Undocumented" };
 
+void FujitsuHalcyonController::loop() {
+    this->controller->process_uart_data();
+}
+
 void FujitsuHalcyonController::setup() {
+    // Currently no way to do this in IDFUARTComponent YAML configuration without setting the flow control pin.
+    // Using RTS is not needed, but the side effect of suppressing input during output is, as the LIN chip provides loopback.
+    if (auto err = uart_set_mode(static_cast<uart_port_t>(static_cast<uart::IDFUARTComponent*>(this->parent_)->get_hw_serial_number()), UART_MODE_RS485_HALF_DUPLEX) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set UART mode: %s", esp_err_to_name(err));
+        this->mark_failed();
+        return;
+    }
+
     this->controller = new fujitsu_general::airstage::h::Controller(
         static_cast<uart::IDFUARTComponent*>(this->parent_)->get_hw_serial_number(),
         this->controller_address_,
@@ -35,15 +47,8 @@ void FujitsuHalcyonController::setup() {
                 this->write_array(buf, length);
                 this->log_buffer("TX", buf, length);
             }
-        },
-        *static_cast<uart::IDFUARTComponent*>(this->parent_)->get_uart_event_queue()
+        }
     );
-
-    if (!this->controller->start()) {
-        ESP_LOGE(TAG, "Failed to start controller");
-        this->mark_failed();
-        return;
-    }
 
     this->connected_sensor->publish_state(false);
 

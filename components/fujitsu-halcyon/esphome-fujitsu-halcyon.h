@@ -57,6 +57,7 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
 
         FujitsuHalcyonController(uart::IDFUARTComponent *parent, uint8_t controller_address) : uart::UARTDevice(parent), controller_address_(controller_address) {}
 
+        void loop() override;
         void setup() override;
         void dump_config() override;
         float get_setup_priority() const override { return esphome::setup_priority::DATA; }

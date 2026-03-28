@@ -4,8 +4,6 @@
 #include <functional>
 #include <queue>
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/queue.h>
 #include <driver/uart.h>
 
 #include "Packet.h"
@@ -103,12 +101,12 @@ class Controller {
     };
 
     public:
-        Controller(uint8_t uart_num, uint8_t controller_address, const Callbacks& callbacks, QueueHandle_t uart_event_queue = nullptr)
-            : uart_num(static_cast<uart_port_t>(uart_num)), controller_address(controller_address), uart_event_queue(uart_event_queue), callbacks(callbacks) {
+        Controller(uint8_t uart_num, uint8_t controller_address, const Callbacks& callbacks)
+            : uart_num(static_cast<uart_port_t>(uart_num)), controller_address(controller_address), callbacks(callbacks) {
             this->set_initialization_stage(InitializationStageEnum::DetectFeatureSupport);
         }
 
-        bool start();
+        void process_uart_data();
         bool is_initialized() const { return this->initialization_stage == InitializationStageEnum::Complete; }
         void reinitialize() { this->set_initialization_stage(InitializationStageEnum::DetectFeatureSupport); }
         InitializationStageEnum get_initialization_stage() const { return this->initialization_stage; }
@@ -143,7 +141,6 @@ class Controller {
     private:
         uart_port_t uart_num;
         uint8_t controller_address;
-        QueueHandle_t uart_event_queue;
         Callbacks callbacks;
 
         struct Features features = {};
@@ -153,7 +150,6 @@ class Controller {
         std::queue<struct Function> function_queue;
         bool last_error_flag = false; // TODO handle errors for multiple indoor units...multiple errors per IU?
 
-        [[noreturn]] void uart_event_task();
         size_t uart_available_bytes();
         void uart_read_bytes(uint8_t *buf, size_t length);
         void uart_write_bytes(const uint8_t *buf, size_t length);

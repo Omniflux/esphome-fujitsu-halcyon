@@ -101,8 +101,8 @@ class Controller {
     };
 
     public:
-        Controller(uint8_t uart_num, uint8_t controller_address, const Callbacks& callbacks)
-            : uart_num(static_cast<uart_port_t>(uart_num)), controller_address(controller_address), callbacks(callbacks) {
+        Controller(uint8_t controller_address, const Callbacks& callbacks)
+            : controller_address(controller_address), callbacks(callbacks) {
             this->set_initialization_stage(InitializationStageEnum::DetectFeatureSupport);
         }
 
@@ -139,7 +139,6 @@ class Controller {
         void process_packet(const Packet::Buffer& buffer, bool lastPacketOnWire = true);
 
     private:
-        uart_port_t uart_num;
         uint8_t controller_address;
         Callbacks callbacks;
 

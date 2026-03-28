@@ -33,28 +33,17 @@ void Controller::process_uart_data() {
 }
 
 size_t Controller::uart_available_bytes() {
-    size_t available_bytes;
-
-    if (this->callbacks.AvailableBytes)
-        available_bytes = callbacks.AvailableBytes();
-    else
-        ::uart_get_buffered_data_len(this->uart_num, &available_bytes);
-
-    return available_bytes;
+    return this->callbacks.AvailableBytes ? callbacks.AvailableBytes() : 0;
 }
 
 void Controller::uart_read_bytes(uint8_t *buf, size_t length) {
     if (this->callbacks.ReadBytes)
         callbacks.ReadBytes(buf, length);
-    else
-        ::uart_read_bytes(this->uart_num, buf, length, portMAX_DELAY);
 }
 
 void Controller::uart_write_bytes(const uint8_t *buf, size_t length) {
     if (this->callbacks.WriteBytes)
         callbacks.WriteBytes(buf, length);
-    else
-        ::uart_write_bytes(this->uart_num, buf, length);
 }
 
 void Controller::set_initialization_stage(const InitializationStageEnum stage) {

@@ -26,7 +26,6 @@ void FujitsuHalcyonController::setup() {
     }
 
     this->controller = new fujitsu_general::airstage::h::Controller(
-        static_cast<uart::IDFUARTComponent*>(this->parent_)->get_hw_serial_number(),
         this->controller_address_,
         {
             .Config = [this](const fujitsu_general::airstage::h::Config& data){ this->update_from_device(data); },

@@ -11,7 +11,9 @@
 #include <esphome/components/uart/uart.h>
 #include <esphome/components/uart/uart_component_esp_idf.h>
 
+#if defined(USE_TZSP)
 #include <esphome/components/tzsp/tzsp.h>
+#endif
 
 #include "esphome-custom-button.h"
 #include "esphome-custom-number.h"
@@ -20,11 +22,16 @@
 
 namespace esphome::fujitsu_general_airstage_h_controller {
 
+#if defined(USE_TZSP)
 class FujitsuHalcyonController : public Component, public climate::Climate, public uart::UARTDevice, public tzsp::TZSPSender {
+#else
+class FujitsuHalcyonController : public Component, public climate::Climate, public uart::UARTDevice {
+#endif
     public:
         binary_sensor::BinarySensor* standby_sensor = new binary_sensor::BinarySensor();
         binary_sensor::BinarySensor* filter_sensor = new binary_sensor::BinarySensor();
         binary_sensor::BinarySensor* error_sensor = new binary_sensor::BinarySensor();
+        binary_sensor::BinarySensor* connected_sensor = new binary_sensor::BinarySensor();
         text_sensor::TextSensor* error_code_sensor = new text_sensor::TextSensor();
         text_sensor::TextSensor* initialization_sensor = new text_sensor::TextSensor();
         sensor::Sensor* remote_sensor = new sensor::Sensor();
@@ -63,6 +70,7 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
 
         FujitsuHalcyonController(uart::IDFUARTComponent *parent, uint8_t controller_address) : uart::UARTDevice(parent), controller_address_(controller_address) {}
 
+        void loop() override;
         void setup() override;
         void dump_config() override;
         float get_setup_priority() const override { return esphome::setup_priority::DATA; }
@@ -91,6 +99,7 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         void update_from_device(const fujitsu_general::airstage::h::Packet& data);
         void update_from_device(const fujitsu_general::airstage::h::Function& data);
         void update_from_controller(const uint8_t address, const fujitsu_general::airstage::h::Config& data);
+        void on_initialization_stage(const fujitsu_general::airstage::h::InitializationStageEnum stage);
 
         void log_buffer(const char* dir, const uint8_t* buf, size_t length);
 

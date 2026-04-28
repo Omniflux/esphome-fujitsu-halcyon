@@ -116,7 +116,7 @@ The following entities are created automatically in Home Assistant. Feature-depe
 | Error | Binary sensor | Enabled | Indicates an active fault on the indoor unit |
 | Error Code | Text sensor | Enabled | Fault code in `AA BB` hex format (unit address + error code) |
 | Initialization Stage | Text sensor | Enabled | Current initialization progress, (4/4) indicates complete |
-| Supported Features | Text sensor | Disabled | List of features reported by the indoor unit, published once at initialization. Example: `Mode: Auto Heat Cool Dry Fan \| Fan: Auto High Medium Low Quiet \| Economy \| Sensor Switching \| V.Louvers \| H.Louvers` |
+| Supported Features | Text sensor | Enabled | List of features reported by the indoor unit, published once at initialization. Example: `Mode: Auto Heat Cool Dry Fan \| Fan: Auto High Medium Low Quiet \| Economy \| Sensor Switching \| V.Louvers \| H.Louvers` |
 | Remote Temperature Sensor | Sensor | Disabled | Temperature reported by another controller on the bus (see `temperature_controller_address`) |
 | Filter Timer Expired | Binary sensor | Feature-dependent | Set when the filter maintenance timer has elapsed |
 

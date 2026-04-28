@@ -131,6 +131,35 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
     // and force a state publish so HA discovers them even if ListEntities already ran
     auto features = this->controller->get_features();
 
+    // Publish supported features as a human-readable diagnostic string.
+    // Built with basic string concatenation — std::format is not available in ESPHome.
+    {
+        std::string s;
+
+        s += "Mode:";
+        if (features.Mode.Auto)   s += " Auto";
+        if (features.Mode.Heat)   s += " Heat";
+        if (features.Mode.Cool)   s += " Cool";
+        if (features.Mode.Dry)    s += " Dry";
+        if (features.Mode.Fan)    s += " Fan";
+
+        s += " | Fan:";
+        if (features.FanSpeed.Auto)   s += " Auto";
+        if (features.FanSpeed.High)   s += " High";
+        if (features.FanSpeed.Medium) s += " Medium";
+        if (features.FanSpeed.Low)    s += " Low";
+        if (features.FanSpeed.Quiet)  s += " Quiet";
+
+        if (features.EconomyMode)       s += " | Economy";
+        if (features.FilterTimer)       s += " | FilterTimer";
+        if (features.SensorSwitching)   s += " | Sensor Switching";
+        if (features.Maintenance)       s += " | Maintenance";
+        if (features.VerticalLouvers)   s += " | V.Louvers";
+        if (features.HorizontalLouvers) s += " | H.Louvers";
+
+        this->supported_features_sensor->publish_state(s);
+    }
+
     if (features.SensorSwitching && this->temperature_sensor_ != nullptr) {
         this->use_sensor_switch->set_internal(false);
         this->use_sensor_switch->publish_state(this->use_sensor_switch->state);
@@ -469,7 +498,7 @@ constexpr fujitsu_general::airstage::h::ModeEnum FujitsuHalcyonController::clima
         // Should not get to this point if traits is respected
         default: return FujitsuMode::Fan;
     }
-} 
+}
 
 constexpr fujitsu_general::airstage::h::FanSpeedEnum FujitsuHalcyonController::climate_fan_mode_to_fan_speed(climate::ClimateFanMode fan_speed) {
     using climate::ClimateFanMode;

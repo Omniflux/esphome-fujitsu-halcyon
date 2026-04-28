@@ -33,6 +33,7 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         binary_sensor::BinarySensor* connected_sensor = new binary_sensor::BinarySensor();
         text_sensor::TextSensor* error_code_sensor = new text_sensor::TextSensor();
         text_sensor::TextSensor* initialization_sensor = new text_sensor::TextSensor();
+        text_sensor::TextSensor* supported_features_sensor = new text_sensor::TextSensor();
         sensor::Sensor* remote_sensor = new sensor::Sensor();
 
         custom::CustomButton* reinitialize_button = new custom::CustomButton([this]() { this->controller->reinitialize(); });

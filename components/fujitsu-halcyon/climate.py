@@ -67,6 +67,7 @@ CONF_RESET_FILTER_TIMER = "reset_filter_timer"
 CONF_FILTER_TIMER_EXPIRED = "filter_timer_expired"
 CONF_REINITIALIZE = "reinitialize"
 CONF_CONNECTED = "connected"
+CONF_SUPPORTED_FEATURES = "supported_features"
 
 CONF_FUNCTION = "function"
 CONF_FUNCTION_VALUE = "function_value"
@@ -169,7 +170,11 @@ CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
             BinarySensor,
             entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
             device_class=DEVICE_CLASS_CONNECTIVITY
-        )
+        ),
+        cv.Optional(CONF_SUPPORTED_FEATURES, default={CONF_NAME: "Supported Features", CONF_DISABLED_BY_DEFAULT: True}): text_sensor.text_sensor_schema(
+            TextSensor,
+            entity_category=ENTITY_CATEGORY_DIAGNOSTIC
+        ),
     }
 ).extend(cv.COMPONENT_SCHEMA).extend(uart.UART_DEVICE_SCHEMA)
 
@@ -278,6 +283,9 @@ async def to_code(config: ConfigType) -> None:
 
     varx = cg.Pvariable(config[CONF_CONNECTED][CONF_ID], var.connected_sensor)
     await binary_sensor.register_binary_sensor(varx, config[CONF_CONNECTED])
+
+    varx = cg.Pvariable(config[CONF_SUPPORTED_FEATURES][CONF_ID], var.supported_features_sensor)
+    await text_sensor.register_text_sensor(varx, config[CONF_SUPPORTED_FEATURES])
 
     varx = cg.Pvariable(config[CONF_REMOTE_SENSOR][CONF_ID], var.remote_sensor)
     await sensor.register_sensor(varx, config[CONF_REMOTE_SENSOR])

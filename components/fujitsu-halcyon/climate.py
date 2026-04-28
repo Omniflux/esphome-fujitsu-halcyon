@@ -171,7 +171,7 @@ CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
             entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
             device_class=DEVICE_CLASS_CONNECTIVITY
         ),
-        cv.Optional(CONF_SUPPORTED_FEATURES, default={CONF_NAME: "Supported Features", CONF_DISABLED_BY_DEFAULT: True}): text_sensor.text_sensor_schema(
+        cv.Optional(CONF_SUPPORTED_FEATURES, default={CONF_NAME: "Supported Features"}): text_sensor.text_sensor_schema(
             TextSensor,
             entity_category=ENTITY_CATEGORY_DIAGNOSTIC
         ),

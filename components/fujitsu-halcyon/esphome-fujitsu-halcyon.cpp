@@ -151,7 +151,7 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
         if (features.FanSpeed.Quiet)  s += " Quiet";
 
         if (features.EconomyMode)       s += " | Economy";
-        if (features.FilterTimer)       s += " | FilterTimer";
+        if (features.FilterTimer)       s += " | Filter Timer";
         if (features.SensorSwitching)   s += " | Sensor Switching";
         if (features.Maintenance)       s += " | Maintenance";
         if (features.VerticalLouvers)   s += " | V.Louvers";

@@ -2,6 +2,9 @@
 
 An ESPHome component to control Fujitsu AirStage-H (product line previously known as Halcyon) units via the three wire (RWB) bus.
 
+> [!WARNING]
+> Requires ESPHome 2026.3.0 or newer.
+
 ```yaml
 substitutions:
   device_name: halcyon-controller
@@ -95,6 +98,38 @@ climate:
 If your unit supports sensor switching and has had the function settings set appropriately (see your installation manual, usually settings `42` and `48`), your unit can also be set to use this sensor instead of the sensor in its air intake. When available, a switch will appear in the Home Assistant device page in the Configuration section named `Use Sensor`
 
 Configure TZSP and use Wireshark with [fujitsu-airstage-h-dissector](https://github.com/Omniflux/fujitsu-airstage-h-dissector) to debug / decode the Fujitsu serial protocol.
+
+## Home Assistant entities
+
+The following entities are created automatically in Home Assistant. Feature-dependent entities (louvers, filter, sensor switching) are only exposed once the unit has reported its capabilities.
+
+### Climate
+| Entity | Type | Description |
+|--------|------|-------------|
+| *(friendly name)* | Climate | Main control: mode, fan speed, setpoint, swing, economy preset |
+
+### Diagnostics
+| Entity | Type | Default | Description |
+|--------|------|---------|-------------|
+| Connected | Binary sensor | Enabled | Whether the controller has completed initialization with the indoor unit |
+| Standby Mode | Binary sensor | Enabled | Active during defrost, oil recovery, or multi-unit synchronization |
+| Error | Binary sensor | Enabled | Indicates an active fault on the indoor unit |
+| Error Code | Text sensor | Enabled | Fault code in `AA BB` hex format (unit address + error code) |
+| Initialization Stage | Text sensor | Enabled | Current initialization progress, (4/4) indicates complete |
+| Supported Features | Text sensor | Enabled | List of features reported by the indoor unit, published once at initialization. Example: `Mode: Auto Heat Cool Dry Fan \| Fan: Auto High Medium Low Quiet \| Economy \| Sensor Switching \| V.Louvers \| H.Louvers` |
+| Remote Temperature Sensor | Sensor | Disabled | Temperature reported by another controller on the bus (see `temperature_controller_address`) |
+| Filter Timer Expired | Binary sensor | Feature-dependent | Set when the filter maintenance timer has elapsed |
+
+### Configuration
+| Entity | Type | Default | Description |
+|--------|------|---------|-------------|
+| Use Sensor | Switch | Feature-dependent | Route the external temperature sensor reading to the indoor unit (requires unit support and `temperature_sensor_id` configured, see settings `42` and `48`) |
+| Reset Filter Timer | Button | Feature-dependent | Reset the filter maintenance timer |
+| Advance Vertical Louver | Button | Feature-dependent | Step the vertical louver to the next position |
+| Advance Horizontal Louver | Button | Feature-dependent | Step the horizontal louver to the next position |
+| Reinitialize | Button | Enabled | Re-run the initialization sequence without rebooting |
+| Function / Function Value / Function Unit | Number | Enabled | Raw function register access |
+| Function_Read / Function_Write | Button | Enabled / Disabled | Trigger a function register read or write |
 
 ## Related projects
 - FOSV's [Fuji-Atom-Interface](https://github.com/FOSV/Fuji-Atom-Interface) - Open hardware interface compatible with this component

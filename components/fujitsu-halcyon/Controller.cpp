@@ -73,9 +73,19 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
     if (packet.SourceType == AddressTypeEnum::IndoorUnit) {
         switch (packet.Type) {
             [[likely]] case PacketTypeEnum::Config:
-                if (this->initialization_stage == InitializationStageEnum::DetectFeatureSupport) {
-                    if (packet.Config.IndoorUnit.UnknownFlags == 2) { // Guessing this means no feature support among other things
-                        this->features = DefaultFeatures;
+                if (this->initialization_stage == InitializationStageEnum::DetectFeatureSupport ||
+                    this->initialization_stage == InitializationStageEnum::FeatureRequest) {
+                    // Advance to FindNextControllerTx if any of:
+                    //  - autoconf is disabled (use the configured features directly),
+                    //  - the IU's UnknownFlags == 2 (no feature negotiation support), or
+                    //  - we already issued a FeatureRequest and the IU replied with Config
+                    //    instead of Features (does not support feature negotiation).
+                    // Otherwise, transition from DetectFeatureSupport to FeatureRequest to probe.
+                    // Note: this->features is already initialized to DefaultFeatures (or to a
+                    // user-supplied override via set_features()), so no assignment is needed here.
+                    if (!this->autoconf ||
+                        packet.Config.IndoorUnit.UnknownFlags == 2 ||
+                        this->initialization_stage == InitializationStageEnum::FeatureRequest) {
                         this->set_initialization_stage(InitializationStageEnum::FindNextControllerTx);
                     } else
                         this->set_initialization_stage(InitializationStageEnum::FeatureRequest);

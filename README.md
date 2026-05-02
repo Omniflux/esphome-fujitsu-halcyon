@@ -99,6 +99,42 @@ If your unit supports sensor switching and has had the function settings set app
 
 Configure TZSP and use Wireshark with [fujitsu-airstage-h-dissector](https://github.com/Omniflux/fujitsu-airstage-h-dissector) to debug / decode the Fujitsu serial protocol.
 
+## Per-unit feature configuration
+
+By default the controller probes the indoor unit with a `FeatureRequest` packet and uses the unit's reported feature set. Some indoor units do not support feature negotiation: they advertise `UnknownFlags == 2` (handled automatically by falling through to in-code `DefaultFeatures`), or they ignore the `FeatureRequest` and keep replying with `Config` packets (also handled automatically since the first such `Config` is treated as "no negotiation support"). A small number of units have been observed to enter a non-recoverable error state when sent a `FeatureRequest`; for those, set `autoconf: false` to skip the probe entirely.
+
+When negotiation does not yield a `Features` packet, you can override the in-code defaults from YAML to match your specific indoor unit. Anything not specified keeps the in-code `DefaultFeatures` value.
+
+```yaml
+climate:
+  - platform: fujitsu-halcyon
+    name: None
+    controller_address: 0
+
+    # Skip the FeatureRequest probe entirely. Use this for units known to
+    # enter a non-recoverable error state when probed. Optional; default true.
+    autoconf: false
+
+    # Override the in-code DefaultFeatures. The IU's reported Features (if any)
+    # always wins; these values apply only when no Features packet arrives.
+    supported_modes:      [AUTO, COOL, HEAT, DRY, FAN]    # any subset
+    supported_fan_modes:  [AUTO, QUIET, LOW, MEDIUM, HIGH] # any subset
+    supported_swing_modes: [VERTICAL]                      # VERTICAL / HORIZONTAL / BOTH
+
+    filter_timer: true
+    sensor_switching: true
+    maintenance: true
+    economy_mode: true
+```
+
+Behavior matrix:
+
+| `autoconf` | IU sends `Features` | Result |
+|---|---|---|
+| `true` (default) | yes | IU's reported `Features` wins |
+| `true` | no | YAML overrides applied on top of `DefaultFeatures` |
+| `false` | (not probed) | YAML overrides applied on top of `DefaultFeatures` |
+
 ## Home Assistant entities
 
 The following entities are created automatically in Home Assistant. Feature-dependent entities (louvers, filter, sensor switching) are only exposed once the unit has reported its capabilities.

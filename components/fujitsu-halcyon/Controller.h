@@ -55,7 +55,8 @@ constexpr Features DefaultFeatures = {
 
 enum class InitializationStageEnum : uint8_t {
     DetectFeatureSupport,
-    FeatureRequest,
+    FeatureRequestTx,
+    FeatureRequestRx,
     FindNextControllerTx,
     FindNextControllerRx,
     Complete

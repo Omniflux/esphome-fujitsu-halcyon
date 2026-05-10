@@ -74,11 +74,26 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
         switch (packet.Type) {
             [[likely]] case PacketTypeEnum::Config:
                 if (this->initialization_stage == InitializationStageEnum::DetectFeatureSupport) {
-                    if (packet.Config.IndoorUnit.UnknownFlags == 2) { // Guessing this means no feature support among other things
-                        this->features = DefaultFeatures;
+                    // Advance to FindNextControllerTx (skip feature negotiation entirely) if:
+                    //  - autoconf is disabled (use the configured features directly), or
+                    //  - the IU's UnknownFlags == 2 (no feature negotiation support).
+                    // Otherwise, transition to FeatureRequestTx to send a FeatureRequest packet
+                    // when our turn with the token comes around. The actual transmission and
+                    // the subsequent transition to FeatureRequestRx happen later in this function.
+                    // Note: this->features is already initialized to DefaultFeatures (or to a
+                    // user-supplied override via set_features()), so no assignment is needed here.
+                    if (!this->autoconf ||
+                        packet.Config.IndoorUnit.UnknownFlags == 2) {
                         this->set_initialization_stage(InitializationStageEnum::FindNextControllerTx);
                     } else
-                        this->set_initialization_stage(InitializationStageEnum::FeatureRequest);
+                        this->set_initialization_stage(InitializationStageEnum::FeatureRequestTx);
+                }
+                else if (this->initialization_stage == InitializationStageEnum::FeatureRequestRx) {
+                    // We already transmitted a FeatureRequest and the IU replied with another
+                    // Config instead of a Features packet -> the IU does not support feature
+                    // negotiation. Fall back to the in-code (or user-supplied) defaults already
+                    // present in this->features and proceed.
+                    this->set_initialization_stage(InitializationStageEnum::FindNextControllerTx);
                 }
 
                 if (this->last_error_flag != packet.Config.IndoorUnit.Error)
@@ -138,8 +153,12 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
         tx_packet.TokenDestinationType = this->next_token_destination_type;
         tx_packet.TokenDestinationAddress = this->next_token_destination_type == AddressTypeEnum::Controller ? this->controller_address + 1 : 1;
 
-        if (this->initialization_stage == InitializationStageEnum::FeatureRequest)
+        if (this->initialization_stage == InitializationStageEnum::FeatureRequestTx) {
             tx_packet.Type = PacketTypeEnum::Features;
+            // Advance only after the request is actually transmitted, mirroring
+            // the FindNextControllerTx -> FindNextControllerRx transition above.
+            this->set_initialization_stage(InitializationStageEnum::FeatureRequestRx);
+        }
         else if ((error_flag_changed && this->is_primary_controller()) ||
                  (packet.Type == PacketTypeEnum::Error && !this->is_primary_controller()))
             tx_packet.Type = PacketTypeEnum::Error;

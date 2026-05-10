@@ -48,6 +48,14 @@ void FujitsuHalcyonController::setup() {
         }
     );
 
+    // Apply user-supplied feature overrides from YAML. features_override_ was
+    // initialized to DefaultFeatures and individually mutated by any setters
+    // called from to_code(); fields the user did not specify still hold their
+    // DefaultFeatures value. Must be applied before the first packet is processed;
+    // setup() runs before loop() so this is safe.
+    this->controller->set_features(this->features_override_);
+    this->controller->set_autoconf(this->autoconf_);
+
     this->connected_sensor->publish_state(false);
 
     // Use specified sensor for this components reported temperature

@@ -72,12 +72,44 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         void set_temperature_sensor(sensor::Sensor* temperature_sensor) { this->temperature_sensor_ = temperature_sensor; }
         void set_temperature_controller_address(uint8_t temperature_controller_address) { this->temperature_controller_address_ = temperature_controller_address; }
 
+        // Feature negotiation overrides (called from to_code() in climate.py).
+        // Setters mutate features_override_ in place; fields not touched keep the
+        // DefaultFeatures value the struct was initialized with.
+        void set_autoconf(bool v) { this->autoconf_ = v; }
+        void set_supported_modes(bool a, bool h, bool f, bool d, bool c) {
+            this->features_override_.Mode.Auto = a;
+            this->features_override_.Mode.Heat = h;
+            this->features_override_.Mode.Fan  = f;
+            this->features_override_.Mode.Dry  = d;
+            this->features_override_.Mode.Cool = c;
+        }
+        void set_supported_fan_modes(bool q, bool l, bool m, bool h, bool a) {
+            this->features_override_.FanSpeed.Quiet  = q;
+            this->features_override_.FanSpeed.Low    = l;
+            this->features_override_.FanSpeed.Medium = m;
+            this->features_override_.FanSpeed.High   = h;
+            this->features_override_.FanSpeed.Auto   = a;
+        }
+        void set_supported_swing_modes(bool vert, bool horiz) {
+            this->features_override_.VerticalLouvers   = vert;
+            this->features_override_.HorizontalLouvers = horiz;
+        }
+        void set_filter_timer(bool v)     { this->features_override_.FilterTimer     = v; }
+        void set_sensor_switching(bool v) { this->features_override_.SensorSwitching = v; }
+        void set_maintenance(bool v)      { this->features_override_.Maintenance     = v; }
+        void set_economy_mode(bool v)     { this->features_override_.EconomyMode     = v; }
+
     protected:
         uint8_t controller_address_{};
         uint8_t temperature_controller_address_{};
         bool ignore_lock_{};
         sensor::Sensor* humidity_sensor_{};
         sensor::Sensor* temperature_sensor_{};
+
+        // Feature negotiation state. Initialized to DefaultFeatures so anything not
+        // overridden by YAML keeps the in-code default. Applied to Controller in setup().
+        bool autoconf_ = true;
+        fujitsu_general::airstage::h::Features features_override_ = fujitsu_general::airstage::h::DefaultFeatures;
 
     private:
         fujitsu_general::airstage::h::Controller* controller;

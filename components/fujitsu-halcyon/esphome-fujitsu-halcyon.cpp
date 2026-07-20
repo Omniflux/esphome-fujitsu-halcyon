@@ -18,7 +18,7 @@ void FujitsuHalcyonController::loop() {
 void FujitsuHalcyonController::setup() {
     // Currently no way to do this in IDFUARTComponent YAML configuration without setting the flow control pin.
     // Using RTS is not needed, but the side effect of suppressing input during output is, as the LIN chip provides loopback.
-    if (auto err = uart_set_mode(static_cast<uart_port_t>(static_cast<uart::IDFUARTComponent*>(this->parent_)->get_hw_serial_number()), UART_MODE_RS485_HALF_DUPLEX) != ESP_OK) {
+    if (auto err = uart_set_mode(static_cast<uart_port_t>(static_cast<uart::IDFUARTComponent*>(this->parent_)->get_hw_serial_number()), UART_MODE_RS485_HALF_DUPLEX); err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to set UART mode: %s", esp_err_to_name(err));
         this->mark_failed();
         return;

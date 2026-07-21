@@ -137,7 +137,7 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
 
     // Expose feature dependent entities now that features are known,
     // and force a state publish so HA discovers them even if ListEntities already ran
-    auto features = this->controller->get_features();
+    auto& features = this->controller->get_features();
 
     // Publish supported features as a human-readable diagnostic string.
     // Built with basic string concatenation — std::format is not available in ESPHome.
@@ -212,7 +212,7 @@ void FujitsuHalcyonController::dump_config() {
     ESP_LOGCONFIG(TAG, "  Standby Mode: %s", this->standby_sensor->state ? "ACTIVE" : "NORMAL");
 
     if (this->controller->is_initialized()) {
-        auto features = this->controller->get_features();
+        auto& features = this->controller->get_features();
 
         ESP_LOGCONFIG(TAG, "  Additional Features:%s", features.FilterTimer || features.Maintenance || features.SensorSwitching ? "" : " NONE");
         if (features.FilterTimer)
@@ -245,7 +245,7 @@ void FujitsuHalcyonController::dump_config() {
 climate::ClimateTraits FujitsuHalcyonController::traits() {
     using namespace climate;
 
-    auto features = this->controller->get_features();
+    auto& features = this->controller->get_features();
     auto traits = ClimateTraits();
 
     // Target temperature / Setpoint
@@ -335,7 +335,7 @@ void FujitsuHalcyonController::control(const climate::ClimateCall& call) {
 
     // Swing mode
     if (call.get_swing_mode().has_value()) {
-        auto swing_mode = climate_swing_mode_to_swing_mode(call.get_swing_mode().value());
+        const auto swing_mode = climate_swing_mode_to_swing_mode(call.get_swing_mode().value());
         this->controller->set_horizontal_swing(swing_mode.first, this->ignore_lock_);
         this->controller->set_vertical_swing(swing_mode.second, this->ignore_lock_);
     }

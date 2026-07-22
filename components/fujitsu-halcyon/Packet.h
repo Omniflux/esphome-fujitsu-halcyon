@@ -185,18 +185,18 @@ constexpr struct BMS {
                 constexpr static auto Mode                  = ByteMaskShiftData(6, 0b00100000);
                 constexpr static auto Timer                 = ByteMaskShiftData(6, 0b00001000);
                 constexpr static auto All                   = ByteMaskShiftData(6, 0b00000100);
-            } Lock = {};
+            } Lock {};
 
             constexpr static struct SeenController_ {
                 constexpr static auto Secondary             = ByteMaskShiftData(6, 0b00000010);
                 constexpr static auto Primary               = ByteMaskShiftData(6, 0b00000001);
-            } SeenController = {};
+            } SeenController {};
 
             constexpr static auto StandbyMode             = ByteMaskShiftData(2, 0b00001000);
             constexpr static auto Error                   = ByteMaskShiftData(3, 0b10000000);
             constexpr static auto UnknownFlags            = ByteMaskShiftData(5, 0b11100000);
             constexpr static auto FilterTimerExpired      = ByteMaskShiftData(7, 0b01000000);
-        } IndoorUnit = {};
+        } IndoorUnit {};
 
         constexpr static struct Controller_ {
             constexpr static auto Write                   = ByteMaskShiftData(2, 0b00001000);
@@ -206,7 +206,7 @@ constexpr struct BMS {
             constexpr static auto Temperature             = ByteMaskShiftData(6, 0b01111111);
             constexpr static auto ResetFilterTimer        = ByteMaskShiftData(7, 0b01000000);
             constexpr static auto Maintenance             = ByteMaskShiftData(7, 0b00100000);
-        } Controller = {};
+        } Controller {};
 
         constexpr static auto FanSpeed                  = ByteMaskShiftData(3, 0b01110000);
         constexpr static auto Mode                      = ByteMaskShiftData(3, 0b00001110);

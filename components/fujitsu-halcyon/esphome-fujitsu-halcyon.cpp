@@ -18,7 +18,7 @@ void FujitsuHalcyonController::loop() {
 void FujitsuHalcyonController::setup() {
     // Currently no way to do this in IDFUARTComponent YAML configuration without setting the flow control pin.
     // Using RTS is not needed, but the side effect of suppressing input during output is, as the LIN chip provides loopback.
-    if (auto err = uart_set_mode(static_cast<uart_port_t>(static_cast<uart::IDFUARTComponent*>(this->parent_)->get_hw_serial_number()), UART_MODE_RS485_HALF_DUPLEX) != ESP_OK) {
+    if (auto err = uart_set_mode(static_cast<uart_port_t>(static_cast<uart::IDFUARTComponent*>(this->parent_)->get_hw_serial_number()), UART_MODE_RS485_HALF_DUPLEX); err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to set UART mode: %s", esp_err_to_name(err));
         this->mark_failed();
         return;
@@ -48,6 +48,14 @@ void FujitsuHalcyonController::setup() {
             }
         }
     );
+
+    // Apply user-supplied feature overrides from YAML. features_override_ was
+    // initialized to DefaultFeatures and individually mutated by any setters
+    // called from to_code(); fields the user did not specify still hold their
+    // DefaultFeatures value. Must be applied before the first packet is processed;
+    // setup() runs before loop() so this is safe.
+    this->controller->set_features(this->features_override_);
+    this->controller->set_autoconf(this->autoconf_);
 
     this->connected_sensor->publish_state(false);
 
@@ -130,7 +138,36 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
 
     // Expose feature dependent entities now that features are known,
     // and force a state publish so HA discovers them even if ListEntities already ran
-    auto features = this->controller->get_features();
+    auto& features = this->controller->get_features();
+
+    // Publish supported features as a human-readable diagnostic string.
+    // Built with basic string concatenation — std::format is not available in ESPHome.
+    {
+        std::string s;
+
+        s += "Mode:";
+        if (features.Mode.Auto)   s += " Auto";
+        if (features.Mode.Heat)   s += " Heat";
+        if (features.Mode.Cool)   s += " Cool";
+        if (features.Mode.Dry)    s += " Dry";
+        if (features.Mode.Fan)    s += " Fan";
+
+        s += " | Fan:";
+        if (features.FanSpeed.Auto)   s += " Auto";
+        if (features.FanSpeed.High)   s += " High";
+        if (features.FanSpeed.Medium) s += " Medium";
+        if (features.FanSpeed.Low)    s += " Low";
+        if (features.FanSpeed.Quiet)  s += " Quiet";
+
+        if (features.EconomyMode)       s += " | Economy";
+        if (features.FilterTimer)       s += " | Filter Timer";
+        if (features.SensorSwitching)   s += " | Sensor Switching";
+        if (features.Maintenance)       s += " | Maintenance";
+        if (features.VerticalLouvers)   s += " | V.Louvers";
+        if (features.HorizontalLouvers) s += " | H.Louvers";
+
+        this->supported_features_sensor->publish_state(s);
+    }
 
     if (features.SensorSwitching && this->temperature_sensor_ != nullptr) {
         this->use_sensor_switch->set_internal(false);
@@ -193,7 +230,7 @@ void FujitsuHalcyonController::dump_config() {
     ESP_LOGCONFIG(TAG, "  Standby Mode: %s", this->standby_sensor->state ? "ACTIVE" : "NORMAL");
 
     if (this->controller->is_initialized()) {
-        auto features = this->controller->get_features();
+        auto& features = this->controller->get_features();
 
         ESP_LOGCONFIG(TAG, "  Additional Features:%s", features.FilterTimer || features.Maintenance || features.SensorSwitching ? "" : " NONE");
         if (features.FilterTimer)
@@ -232,7 +269,7 @@ void FujitsuHalcyonController::dump_config() {
 climate::ClimateTraits FujitsuHalcyonController::traits() {
     using namespace climate;
 
-    auto features = this->controller->get_features();
+    auto& features = this->controller->get_features();
     auto traits = ClimateTraits();
 
     // Target temperature / Setpoint
@@ -322,7 +359,7 @@ void FujitsuHalcyonController::control(const climate::ClimateCall& call) {
 
     // Swing mode
     if (call.get_swing_mode().has_value()) {
-        auto swing_mode = climate_swing_mode_to_swing_mode(call.get_swing_mode().value());
+        const auto swing_mode = climate_swing_mode_to_swing_mode(call.get_swing_mode().value());
         this->controller->set_horizontal_swing(swing_mode.first, this->ignore_lock_);
         this->controller->set_vertical_swing(swing_mode.second, this->ignore_lock_);
     }
@@ -501,7 +538,7 @@ constexpr fujitsu_general::airstage::h::ModeEnum FujitsuHalcyonController::clima
         // Should not get to this point if traits is respected
         default: return FujitsuMode::Fan;
     }
-} 
+}
 
 constexpr fujitsu_general::airstage::h::FanSpeedEnum FujitsuHalcyonController::climate_fan_mode_to_fan_speed(climate::ClimateFanMode fan_speed) {
     using climate::ClimateFanMode;

@@ -56,6 +56,26 @@ CONF_TEMPERATURE_SENSOR = "temperature_sensor_id"
 CONF_USE_SENSOR = "use_sensor"
 CONF_IGNORE_LOCK = "ignore_lock"
 
+# Feature negotiation override options.
+# When the indoor unit responds to a FeatureRequest with a Features packet, the
+# IU's reported feature set is used and these options are ignored. Use these
+# options when (a) the IU does not support feature negotiation (responds with
+# Config instead of Features, or has UnknownFlags == 2), or (b) you want to
+# disable probing entirely with `autoconf: false` for IUs known to misbehave on
+# FeatureRequest. Anything not specified keeps the in-code DefaultFeatures value.
+CONF_AUTOCONF = "autoconf"
+CONF_SUPPORTED_MODES = "supported_modes"
+CONF_SUPPORTED_FAN_MODES = "supported_fan_modes"
+CONF_SUPPORTED_SWING_MODES = "supported_swing_modes"
+CONF_FILTER_TIMER = "filter_timer"
+CONF_SENSOR_SWITCHING = "sensor_switching"
+CONF_MAINTENANCE = "maintenance"
+CONF_ECONOMY_MODE = "economy_mode"
+
+ALLOWED_MODES = {"AUTO", "HEAT", "FAN", "DRY", "COOL"}
+ALLOWED_FAN_MODES = {"QUIET", "LOW", "MEDIUM", "HIGH", "AUTO"}
+ALLOWED_SWING_MODES = {"VERTICAL", "HORIZONTAL", "BOTH"}
+
 CONF_STANDBY_MODE = "standby_mode"
 CONF_ERROR_CODE = "error_code"
 CONF_ERROR_STATE = "error_state"
@@ -67,6 +87,7 @@ CONF_RESET_FILTER_TIMER = "reset_filter_timer"
 CONF_FILTER_TIMER_EXPIRED = "filter_timer_expired"
 CONF_REINITIALIZE = "reinitialize"
 CONF_CONNECTED = "connected"
+CONF_SUPPORTED_FEATURES = "supported_features"
 
 CONF_ZONE_1 = "zone_1"
 CONF_ZONE_2 = "zone_2"
@@ -108,6 +129,14 @@ CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
         cv.Optional(CONF_IGNORE_LOCK, default=False): cv.boolean,
         cv.Optional(CONF_TEMPERATURE_SENSOR): cv.use_id(sensor.Sensor),
         cv.Optional(CONF_HUMIDITY_SENSOR): cv.use_id(sensor.Sensor),
+        cv.Optional(CONF_AUTOCONF): cv.boolean,
+        cv.Optional(CONF_SUPPORTED_MODES): cv.ensure_list(cv.one_of(*ALLOWED_MODES, upper=True)),
+        cv.Optional(CONF_SUPPORTED_FAN_MODES): cv.ensure_list(cv.one_of(*ALLOWED_FAN_MODES, upper=True)),
+        cv.Optional(CONF_SUPPORTED_SWING_MODES): cv.ensure_list(cv.one_of(*ALLOWED_SWING_MODES, upper=True)),
+        cv.Optional(CONF_FILTER_TIMER): cv.boolean,
+        cv.Optional(CONF_SENSOR_SWITCHING): cv.boolean,
+        cv.Optional(CONF_MAINTENANCE): cv.boolean,
+        cv.Optional(CONF_ECONOMY_MODE): cv.boolean,
         cv.Optional(CONF_FUNCTION, default={CONF_NAME: "Function", CONF_MODE: "BOX"}): number.number_schema(
             CustomNumber,
             entity_category=ENTITY_CATEGORY_CONFIG
@@ -180,6 +209,10 @@ CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
             BinarySensor,
             entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
             device_class=DEVICE_CLASS_CONNECTIVITY
+        ),
+        cv.Optional(CONF_SUPPORTED_FEATURES, default={CONF_NAME: "Supported Features"}): text_sensor.text_sensor_schema(
+            TextSensor,
+            entity_category=ENTITY_CATEGORY_DIAGNOSTIC
         ),
         cv.Optional(CONF_ZONE_1, default={CONF_NAME: "Zone 1", CONF_INTERNAL: True}): switch.switch_schema(
             CustomSwitch,
@@ -301,6 +334,35 @@ async def to_code(config: ConfigType) -> None:
     cg.add(var.set_temperature_controller_address(config[CONF_TEMPERATURE_CONTROLLER_ADDRESS]))
     cg.add(var.set_ignore_lock(config[CONF_IGNORE_LOCK]))
 
+    # Apply feature negotiation overrides. Anything omitted from YAML keeps the
+    # in-code DefaultFeatures value.
+    if CONF_AUTOCONF in config:
+        cg.add(var.set_autoconf(config[CONF_AUTOCONF]))
+    if CONF_SUPPORTED_MODES in config:
+        modes = set(config[CONF_SUPPORTED_MODES])
+        cg.add(var.set_supported_modes(
+            "AUTO" in modes, "HEAT" in modes, "FAN" in modes, "DRY" in modes, "COOL" in modes
+        ))
+    if CONF_SUPPORTED_FAN_MODES in config:
+        fan_modes = set(config[CONF_SUPPORTED_FAN_MODES])
+        cg.add(var.set_supported_fan_modes(
+            "QUIET" in fan_modes, "LOW" in fan_modes, "MEDIUM" in fan_modes,
+            "HIGH" in fan_modes, "AUTO" in fan_modes
+        ))
+    if CONF_SUPPORTED_SWING_MODES in config:
+        swing_modes = set(config[CONF_SUPPORTED_SWING_MODES])
+        vertical = "VERTICAL" in swing_modes or "BOTH" in swing_modes
+        horizontal = "HORIZONTAL" in swing_modes or "BOTH" in swing_modes
+        cg.add(var.set_supported_swing_modes(vertical, horizontal))
+    if CONF_FILTER_TIMER in config:
+        cg.add(var.set_filter_timer(config[CONF_FILTER_TIMER]))
+    if CONF_SENSOR_SWITCHING in config:
+        cg.add(var.set_sensor_switching(config[CONF_SENSOR_SWITCHING]))
+    if CONF_MAINTENANCE in config:
+        cg.add(var.set_maintenance(config[CONF_MAINTENANCE]))
+    if CONF_ECONOMY_MODE in config:
+        cg.add(var.set_economy_mode(config[CONF_ECONOMY_MODE]))
+
     varx = cg.Pvariable(config[CONF_STANDBY_MODE][CONF_ID], var.standby_sensor)
     await binary_sensor.register_binary_sensor(varx, config[CONF_STANDBY_MODE])
 
@@ -340,6 +402,9 @@ async def to_code(config: ConfigType) -> None:
     varx = cg.Pvariable(config[CONF_CONNECTED][CONF_ID], var.connected_sensor)
     await binary_sensor.register_binary_sensor(varx, config[CONF_CONNECTED])
 
+    varx = cg.Pvariable(config[CONF_SUPPORTED_FEATURES][CONF_ID], var.supported_features_sensor)
+    await text_sensor.register_text_sensor(varx, config[CONF_SUPPORTED_FEATURES])
+
     varx = cg.Pvariable(config[CONF_REMOTE_SENSOR][CONF_ID], var.remote_sensor)
     await sensor.register_sensor(varx, config[CONF_REMOTE_SENSOR])
 
@@ -370,12 +435,6 @@ async def to_code(config: ConfigType) -> None:
         step=1
     )
 
-    if CONF_TEMPERATURE_SENSOR in config:
-        cg.add(var.set_temperature_sensor(await cg.get_variable(config[CONF_TEMPERATURE_SENSOR])))
-
-    if CONF_HUMIDITY_SENSOR in config:
-        cg.add(var.set_humidity_sensor(await cg.get_variable(config[CONF_HUMIDITY_SENSOR])))
-
     varx = cg.Pvariable(config[CONF_ZONE_1][CONF_ID], var.zone_switches[0])
     await switch.register_switch(varx, config[CONF_ZONE_1])
 
@@ -405,3 +464,9 @@ async def to_code(config: ConfigType) -> None:
 
     varx = cg.Pvariable(config[CONF_ZONE_GROUP_NIGHT][CONF_ID], var.zone_group_night_switch)
     await switch.register_switch(varx, config[CONF_ZONE_GROUP_NIGHT])
+
+    if CONF_TEMPERATURE_SENSOR in config:
+        cg.add(var.set_temperature_sensor(await cg.get_variable(config[CONF_TEMPERATURE_SENSOR])))
+
+    if CONF_HUMIDITY_SENSOR in config:
+        cg.add(var.set_humidity_sensor(await cg.get_variable(config[CONF_HUMIDITY_SENSOR])))

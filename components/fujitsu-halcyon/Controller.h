@@ -56,7 +56,8 @@ constexpr Features DefaultFeatures = {
 
 enum class InitializationStageEnum : uint8_t {
     DetectFeatureSupport,
-    FeatureRequest,
+    FeatureRequestTx,
+    FeatureRequestRx,
     ZoneRequestEnabled,
     FindNextControllerTx,
     FindNextControllerRx,
@@ -134,6 +135,19 @@ class Controller {
         const struct Features& get_features() const { return this->features; }
         const ZoneFunction::Zones get_zones() const { return this->zones; }
 
+        // Override the in-code DefaultFeatures with a user-supplied Features struct.
+        // Used both as the initial fallback while probing and as the value applied
+        // when feature negotiation is skipped or unsupported.
+        // Must be called before the controller starts processing packets to take effect
+        // for the first IU Config received.
+        void set_features(const Features& features) { this->features = features; }
+
+        // Controls whether the controller probes the IU with a FeatureRequest packet.
+        // When false, the controller skips the FeatureRequest stage on the first IU
+        // Config and applies the configured features directly. Useful for IUs known
+        // to misbehave on FeatureRequest (e.g. enter a non-recoverable error state).
+        void set_autoconf(bool autoconf) { this->autoconf = autoconf; }
+
         void set_current_temperature(float temperature);
         bool set_enabled(bool enabled, bool ignore_lock = false);
         bool set_economy(bool economy, bool ignore_lock = false);
@@ -168,7 +182,8 @@ class Controller {
         uint8_t controller_address;
         Callbacks callbacks;
 
-        struct Features features = {};
+        bool autoconf = true;
+        struct Features features = DefaultFeatures;
         struct Config current_configuration = {};
         struct Config changed_configuration = {};
         struct ZoneConfig current_zone_configuration = {};

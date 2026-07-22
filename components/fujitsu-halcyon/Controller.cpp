@@ -488,13 +488,13 @@ bool Controller::set_zone(uint8_t zone, bool active, bool ignore_lock) {
     if (!ignore_lock && this->current_configuration.IndoorUnit.Lock.All)
         return false;
 
-    if (!this->zones.EnabledZones.test(zone))
+    if (zone >= MaxZone || !this->zones.EnabledZones[zone])
         return false;
 
     // Ensure at least one outlet is open
     if (!active && !this->zones.ZoneCommon &&
         this->changed_zone_configuration.ActiveZones.count() == 1 &&
-        this->changed_zone_configuration.ActiveZones.test(zone))
+        this->changed_zone_configuration.ActiveZones[zone])
         return false;
 
     // Invalidate active zone groups

@@ -194,7 +194,7 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
         auto& zones = this->controller->get_zones();
 
         for (auto i = 0; i < this->zone_switches.size(); i++) {
-            if (zones.EnabledZones.test(i)) {
+            if (zones.EnabledZones[i]) {
                 this->zone_switches[i]->set_internal(false);
                 this->zone_switches[i]->publish_state(this->zone_switches[i]->state);
             }

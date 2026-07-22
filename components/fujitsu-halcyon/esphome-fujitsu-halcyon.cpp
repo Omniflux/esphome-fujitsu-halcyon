@@ -165,6 +165,7 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
         if (features.Maintenance)       s += " | Maintenance";
         if (features.VerticalLouvers)   s += " | V.Louvers";
         if (features.HorizontalLouvers) s += " | H.Louvers";
+        if (features.Zones)             s += " | Zones";
 
         this->supported_features_sensor->publish_state(s);
     }
@@ -189,7 +190,8 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
         this->reset_filter_button->set_internal(false);
     }
 
-    // Zones
+    // Expose zone dependent entities now that zones are known,
+    // and force a state publish so HA discovers them even if ListEntities already ran
     if (features.Zones) {
         auto& zones = this->controller->get_zones();
 

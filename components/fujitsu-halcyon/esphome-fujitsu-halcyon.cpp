@@ -190,9 +190,9 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
     }
 
     // Zones
-    auto zones = this->controller->get_zones();
-
     if (features.Zones) {
+        auto& zones = this->controller->get_zones();
+
         for (auto i = 0; i < this->zone_switches.size(); i++) {
             if (zones.EnabledZones.test(i)) {
                 this->zone_switches[i]->set_internal(false);
@@ -240,7 +240,7 @@ void FujitsuHalcyonController::dump_config() {
         if (features.SensorSwitching)
             ESP_LOGCONFIG(TAG, "    - Sensor Switching");
         if (features.Zones) {
-            auto zones = this->controller->get_zones();
+            auto& zones = this->controller->get_zones();
 
             ESP_LOGCONFIG(TAG, "    - Zones: %s", zones.EnabledZones.count());
             ESP_LOGCONFIG(TAG, "        Common Zone: %s", zones.ZoneCommon ? "YES" : "NO");

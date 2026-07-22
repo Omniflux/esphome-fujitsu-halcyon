@@ -133,7 +133,7 @@ class Controller {
         void reinitialize() { this->set_initialization_stage(InitializationStageEnum::DetectFeatureSupport); }
         InitializationStageEnum get_initialization_stage() const { return this->initialization_stage; }
         const struct Features& get_features() const { return this->features; }
-        const ZoneFunction::Zones get_zones() const { return this->zones; }
+        const struct ZoneFunction::Zones& get_zones() const { return this->zones; }
 
         // Override the in-code DefaultFeatures with a user-supplied Features struct.
         // Used both as the initial fallback while probing and as the value applied
@@ -188,7 +188,7 @@ class Controller {
         struct Config changed_configuration = {};
         struct ZoneConfig current_zone_configuration = {};
         struct ZoneConfig changed_zone_configuration = {};
-        ZoneFunction::Zones zones = {};
+        struct ZoneFunction::Zones zones = {};
 
         std::bitset<SettableFields::MAX> configuration_changes;
         std::bitset<ZoneSettableFields::MAX> zone_configuration_changes;

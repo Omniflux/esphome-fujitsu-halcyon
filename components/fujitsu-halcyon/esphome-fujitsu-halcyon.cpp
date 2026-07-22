@@ -232,7 +232,7 @@ void FujitsuHalcyonController::dump_config() {
     if (this->controller->is_initialized()) {
         auto& features = this->controller->get_features();
 
-        ESP_LOGCONFIG(TAG, "  Additional Features:%s", features.FilterTimer || features.Maintenance || features.SensorSwitching ? "" : " NONE");
+        ESP_LOGCONFIG(TAG, "  Additional Features:%s", features.FilterTimer || features.Maintenance || features.SensorSwitching || features.Zones ? "" : " NONE");
         if (features.FilterTimer)
             ESP_LOGCONFIG(TAG, "    - Filter Timer");
         if (features.Maintenance)
@@ -242,7 +242,7 @@ void FujitsuHalcyonController::dump_config() {
         if (features.Zones) {
             auto& zones = this->controller->get_zones();
 
-            ESP_LOGCONFIG(TAG, "    - Zones: %s", zones.EnabledZones.count());
+            ESP_LOGCONFIG(TAG, "    - Zones: %zu", zones.EnabledZones.count());
             ESP_LOGCONFIG(TAG, "        Common Zone: %s", zones.ZoneCommon ? "YES" : "NO");
         }
     }

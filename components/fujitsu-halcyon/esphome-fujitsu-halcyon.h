@@ -47,7 +47,10 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
             std::array<custom::CustomSwitch*, fujitsu_general::airstage::h::MaxZone> switches;
 
             for (auto i = 0; i < switches.size(); i++)
-                switches[i] = new custom::CustomSwitch([this, i](bool state) { return this->controller->set_zone(i, state, this->ignore_lock_); });
+                switches[i] = new custom::CustomSwitch([this, i](bool state) {
+                    ESP_LOGD("esphome::fujitsu_general_airstage_h_controller", "Zone %zu switching state to %zu", i + 1, state);
+                    return this->controller->set_zone(i, state, this->ignore_lock_);
+                });
 
             return switches;
         }();

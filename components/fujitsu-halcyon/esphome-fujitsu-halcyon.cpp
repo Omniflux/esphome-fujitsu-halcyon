@@ -244,7 +244,12 @@ void FujitsuHalcyonController::dump_config() {
         if (features.Zones) {
             auto& zones = this->controller->get_zones();
 
-            ESP_LOGCONFIG(TAG, "    - Zones: %zu", zones.EnabledZones.count());
+            std::string s;
+            for (auto i = 0; i < zones.EnabledZones.size(); i++)
+                if (zones.EnabledZones[i])
+                    s += std::to_string(i + 1) + ", ";
+
+            ESP_LOGCONFIG(TAG, "    - Zones: %s", s.empty() ? "NONE" : s.substr(0, s.length() - 2).c_str());
             ESP_LOGCONFIG(TAG, "        Common Zone: %s", zones.ZoneCommon ? "YES" : "NO");
         }
     }

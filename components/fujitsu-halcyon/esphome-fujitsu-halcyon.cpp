@@ -57,7 +57,7 @@ void FujitsuHalcyonController::setup() {
     this->controller->set_features(this->features_override_);
     this->controller->set_autoconf(this->autoconf_);
 
-    this->connected_sensor->publish_state(false);
+    this->connected_sensor->publish_initial_state(false);
 
     // Use specified sensor for this components reported temperature
     if (this->temperature_sensor_ != nullptr) {
@@ -127,13 +127,11 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
     this->initialization_sensor->publish_state(
         str_sprintf("(%d/%d)", static_cast<stage_t>(stage), static_cast<stage_t>(InitializationStageEnum::Complete)));
 
-    bool connected = (stage == InitializationStageEnum::Complete);
-
     // Update connected sensor
-    if (!this->connected_sensor->has_state() || connected != this->connected_sensor->state)
-        this->connected_sensor->publish_state(connected);
+    this->connected_sensor->publish_state(stage == InitializationStageEnum::Complete);
 
-    if (!connected)
+    // Everything below depends on features being known
+    if (stage <= InitializationStageEnum::FeatureRequestRx)
         return;
 
     // Expose feature dependent entities now that features are known,
@@ -218,7 +216,9 @@ void FujitsuHalcyonController::log_buffer(const char* dir, const uint8_t* buf, s
     this->tzsp_send(tbuf);
 #endif
 
-    ESP_LOGD(TAG, "%s: %02hhX %02hhX %02hhX %02hhX %02hhX %02hhX %02hhX %02hhX", dir, tbuf[0], tbuf[1], tbuf[2], tbuf[3], tbuf[4], tbuf[5], tbuf[6], tbuf[7]);
+    char pretty_buf[esphome::format_hex_pretty_size(tbuf.size())];
+    esphome::format_hex_pretty_to(pretty_buf, sizeof(pretty_buf), tbuf.data(), tbuf.size(), ' ');
+    ESP_LOGD(TAG, "%s: %s", dir, pretty_buf);
 }
 
 void FujitsuHalcyonController::dump_config() {
@@ -461,8 +461,10 @@ void FujitsuHalcyonController::update_from_device(const fujitsu_general::airstag
                 this->error_code_sensor->publish_state("");
             else
             {
-                std::array<uint8_t, 2> errorBytes = { data.SourceAddress, data.Error.ErrorCode };
-                this->error_code_sensor->publish_state(format_hex_pretty(errorBytes.data(), errorBytes.size(), ' '));
+                const auto errorBytes = std::to_array<uint8_t>({ data.SourceAddress, data.Error.ErrorCode });
+                char pretty_buf[esphome::format_hex_pretty_size(errorBytes.size())];
+                esphome::format_hex_pretty_to(pretty_buf, errorBytes, ' ');
+                this->error_code_sensor->publish_state(pretty_buf);
             }
         }
     }

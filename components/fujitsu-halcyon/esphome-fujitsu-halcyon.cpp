@@ -422,8 +422,10 @@ void FujitsuHalcyonController::update_from_device(const fujitsu_general::airstag
                 this->error_code_sensor->publish_state("");
             else
             {
-                std::array<uint8_t, 2> errorBytes = { data.SourceAddress, data.Error.ErrorCode };
-                this->error_code_sensor->publish_state(format_hex_pretty(errorBytes.data(), errorBytes.size(), ' '));
+                const auto errorBytes = std::to_array<uint8_t>({ data.SourceAddress, data.Error.ErrorCode });
+                char pretty_buf[esphome::format_hex_pretty_size(errorBytes.size())];
+                esphome::format_hex_pretty_to(pretty_buf, errorBytes, ' ');
+                this->error_code_sensor->publish_state(pretty_buf);
             }
         }
     }

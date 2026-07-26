@@ -56,7 +56,7 @@ void FujitsuHalcyonController::setup() {
     this->controller->set_features(this->features_override_);
     this->controller->set_autoconf(this->autoconf_);
 
-    this->connected_sensor->publish_state(false);
+    this->connected_sensor->publish_initial_state(false);
 
     // Use specified sensor for this components reported temperature
     if (this->temperature_sensor_ != nullptr) {
@@ -126,13 +126,11 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
     this->initialization_sensor->publish_state(
         str_sprintf("(%d/%d)", static_cast<stage_t>(stage), static_cast<stage_t>(InitializationStageEnum::Complete)));
 
-    bool connected = (stage == InitializationStageEnum::Complete);
-
     // Update connected sensor
-    if (!this->connected_sensor->has_state() || connected != this->connected_sensor->state)
-        this->connected_sensor->publish_state(connected);
+    this->connected_sensor->publish_state(stage == InitializationStageEnum::Complete);
 
-    if (!connected)
+    // Everything below depends on features being known
+    if (stage <= InitializationStageEnum::FeatureRequestRx)
         return;
 
     // Expose feature dependent entities now that features are known,

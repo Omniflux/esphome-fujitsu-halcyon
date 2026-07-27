@@ -485,17 +485,27 @@ bool Controller::maintenance(bool ignore_lock) {
 }
 
 bool Controller::set_zone(uint8_t zone, bool active, bool ignore_lock) {
+    ESP_LOGD(TAG, "set_zone(zone=%u, active=%u, ignore_lock=%u)", zone, active, ignore_lock);
     if (!ignore_lock && this->current_configuration.IndoorUnit.Lock.All)
+    {
+        ESP_LOGD(TAG, "  aborting: !ignore_lock=%u && current_configuration.IndoorUnit.Lock.All=%u", ignore_lock, this->current_configuration.IndoorUnit.Lock.All);
         return false;
+    }
 
     if (zone >= MaxZone || !this->zones.EnabledZones[zone])
+    {
+        ESP_LOGD(TAG, "  aborting: zone=%u >= MaxZone=%u || !zones.EnabledZones[zone]=%u", zone, MaxZone, static_cast<bool>(this->zones.EnabledZones[zone]));
         return false;
+    }
 
     // Ensure at least one outlet is open
     if (!active && !this->zones.ZoneCommon &&
         this->changed_zone_configuration.ActiveZones.count() == 1 &&
         this->changed_zone_configuration.ActiveZones[zone])
+    {
+        ESP_LOGD(TAG, "  aborting: !active=%u && !zones.ZoneCommon=%u && changed_zone_configuration.ActiveZones.count()=%u == 1 && changed_zone_configuration.ActiveZones[zone]=%u", active, this->zones.ZoneCommon, this->changed_zone_configuration.ActiveZones.count(), static_cast<bool>(this->changed_zone_configuration.ActiveZones[zone]));
         return false;
+    }
 
     // Invalidate active zone groups
     this->set_zone_group_day(false, true);
@@ -503,6 +513,7 @@ bool Controller::set_zone(uint8_t zone, bool active, bool ignore_lock) {
 
     this->changed_zone_configuration.ActiveZones[zone] = active;
     this->zone_configuration_changes[zone] = true;
+    ESP_LOGD(TAG, "  success");
     return true;
 }
 

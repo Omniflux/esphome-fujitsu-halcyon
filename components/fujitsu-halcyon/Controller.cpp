@@ -499,12 +499,19 @@ bool Controller::set_zone(uint8_t zone, bool active, bool ignore_lock) {
     }
 
     // Ensure at least one outlet is open
-    if (!active && !this->zones.ZoneCommon &&
-        this->changed_zone_configuration.ActiveZones.count() == 1 &&
-        this->changed_zone_configuration.ActiveZones[zone])
-    {
-        ESP_LOGD(TAG, "  aborting: !active=%u && !zones.ZoneCommon=%u && changed_zone_configuration.ActiveZones.count()=%u == 1 && changed_zone_configuration.ActiveZones[zone]=%u", active, this->zones.ZoneCommon, this->changed_zone_configuration.ActiveZones.count(), static_cast<bool>(this->changed_zone_configuration.ActiveZones[zone]));
-        return false;
+    if (!active && !this->zones.ZoneCommon) {
+        // Merge current and changed zone configurations to determine if any zones will remain active
+        auto merged_active_zones = this->current_zone_configuration.ActiveZones;
+        if (this->zone_configuration_changes.any())
+            for (size_t i = 0; i < MaxZone; i++)
+                if (this->zone_configuration_changes[i])
+                    merged_active_zones[i] = this->changed_zone_configuration.ActiveZones[i];
+        merged_active_zones[zone] = active;
+
+        if (merged_active_zones.none()) {
+            ESP_LOGD(TAG, "  aborting:  merged_active_zones.none()=true");
+            return false;
+        }
     }
 
     // Invalidate active zone groups

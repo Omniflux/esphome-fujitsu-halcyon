@@ -124,8 +124,6 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
     using fujitsu_general::airstage::h::InitializationStageEnum;
     using stage_t = std::underlying_type_t<InitializationStageEnum>;
 
-    ESP_LOGD(TAG, "Initialization stage: (%d/%d)", static_cast<stage_t>(stage), static_cast<stage_t>(InitializationStageEnum::Complete));
-
     this->initialization_sensor->publish_state(
         str_sprintf("(%d/%d)", static_cast<stage_t>(stage), static_cast<stage_t>(InitializationStageEnum::Complete)));
 
@@ -224,11 +222,7 @@ void FujitsuHalcyonController::log_buffer(const char* dir, const uint8_t* buf, s
 }
 
 void FujitsuHalcyonController::dump_config() {
-    using fujitsu_general::airstage::h::InitializationStageEnum;
-    using stage_t = std::underlying_type_t<InitializationStageEnum>;
-
     LOG_CLIMATE("", "FujitsuHalcyonController", this);
-    ESP_LOGD(TAG, "  Initialization stage: (%d/%d)", static_cast<stage_t>(this->controller->get_initialization_stage()), static_cast<stage_t>(InitializationStageEnum::Complete));
     ESP_LOGCONFIG(TAG, "  Controller Address: %u (%s)", this->controller_address_, ControllerName[std::clamp(static_cast<size_t>(this->controller_address_), 0u, ControllerName.size() - 1)]);
     ESP_LOGCONFIG(TAG, "  Remote Temperature Controller Address: %u (%s)", this->temperature_controller_address_, ControllerName[std::clamp(static_cast<size_t>(this->temperature_controller_address_), 0u, ControllerName.size() - 1)]);
     LOG_SENSOR("  ", "Remote Temperature Controller Sensor", this->remote_sensor);

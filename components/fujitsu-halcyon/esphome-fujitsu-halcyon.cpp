@@ -124,8 +124,11 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
     using fujitsu_general::airstage::h::InitializationStageEnum;
     using stage_t = std::underlying_type_t<InitializationStageEnum>;
 
-    this->initialization_sensor->publish_state(
-        str_sprintf("(%d/%d)", static_cast<stage_t>(stage), static_cast<stage_t>(InitializationStageEnum::Complete)));
+    // Update initialization stage sensor
+    char buf[8];
+    snprintf(buf, sizeof(buf), "(%u/%u)", static_cast<stage_t>(stage), static_cast<stage_t>(InitializationStageEnum::Complete));
+    this->initialization_sensor->publish_state(buf);
+    ESP_LOGD(TAG, "Initialization stage: %s", buf);
 
     // Update connected sensor
     this->connected_sensor->publish_state(stage == InitializationStageEnum::Complete);

@@ -171,8 +171,11 @@ The following entities are created automatically in Home Assistant. Feature-depe
 
 ## Related projects
 - FOSV's [Fuji-Atom-Interface](https://github.com/FOSV/Fuji-Atom-Interface) - Open hardware interface compatible with this component
+- AndrewBoy's [Fujitsu-AC-3-Wire-for-ESPHome-with-MCP2021](https://github.com/AndrewBoyHUN/AndrewBoys-Fujitsu-AC-3-Wire-for-ESPHome-with-MCP2021) - Open hardware interface compatible with this component
+- Sam Jam Sam's [Esphome-Fujitsu-Heat-Pump](https://github.com/sam-jam-sam/Esphome-Fujitsu-Heat-Pump) - Open hardware interface compatible with this component
 <!-- -->
 - My [esphome-fujitsu-dmmum](https://github.com/Omniflux/esphome-fujitsu-dmmum) - Fujitsu AirStage-H 3-wire Central Controller component for ESPHome
+- My [fujitsu-airstage-h-dissector](https://github.com/Omniflux/fujitsu-airstage-h-dissector) - Wireshark dissector to debug / decode the Fujitsu serial protocol.
 <!-- -->
 - Aaron Zhang's [esphome-fujitsu](https://github.com/FujiHeatPump/esphome-fujitsu)
 - Jaroslaw Przybylowicz's [fuji-iot](https://github.com/jaroslawprzybylowicz/fuji-iot)
@@ -180,3 +183,7 @@ The following entities are created automatically in Home Assistant. Feature-depe
 - Raal Goff's [FujiHK](https://github.com/unreality/FujiHK)
 <!-- -->
 - Myles Eftos's [Reverse engineering](https://hackaday.io/project/19473-reverse-engineering-a-fujitsu-air-conditioner-unit)
+- Home Assistant [thread](https://community.home-assistant.io/t/fujitsu-ac-heat-pump-integration-via-esphome-esp32/)
+<!-- -->
+- Sergek's [AC-fujitsu-General-EZ-0001HSEFR-integration](https://github.com/thaserge-primary/AC-fujitsu-General-EZ-0001HSEFR-integration) - For older Fujitsu hardware
+- Benas Ragauskas' [FujitsuAC](https://github.com/Benas09/FujitsuAC) - For newer Fujitsu hardware

@@ -173,7 +173,10 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
         tx_packet.TokenDestinationType = this->next_token_destination_type;
         tx_packet.TokenDestinationAddress = this->next_token_destination_type == AddressTypeEnum::Controller ? this->controller_address + 1 : 1;
 
-        if (this->initialization_stage == InitializationStageEnum::FeatureRequestTx) {
+        if ((error_flag_changed && this->is_primary_controller()) ||
+            (packet.Type == PacketTypeEnum::Error && !this->is_primary_controller()))
+            tx_packet.Type = PacketTypeEnum::Error;
+        else if (this->initialization_stage == InitializationStageEnum::FeatureRequestTx) {
             tx_packet.Type = PacketTypeEnum::Features;
             // Advance only after the request is actually transmitted, mirroring
             // the FindNextControllerTx -> FindNextControllerRx transition above.
@@ -183,9 +186,6 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
             tx_packet.Type = PacketTypeEnum::ZoneFunction;
         else if (this->initialization_stage == InitializationStageEnum::ZoneRequestActive)
             tx_packet.Type = PacketTypeEnum::ZoneConfig;
-        else if ((error_flag_changed && this->is_primary_controller()) ||
-                 (packet.Type == PacketTypeEnum::Error && !this->is_primary_controller()))
-            tx_packet.Type = PacketTypeEnum::Error;
         else if (this->zone_configuration_changes.any()) {
             tx_packet.Type = PacketTypeEnum::ZoneConfig;
             tx_packet.ZoneConfig = this->current_zone_configuration;

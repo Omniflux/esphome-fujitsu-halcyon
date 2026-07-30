@@ -158,7 +158,8 @@ Packet::Buffer Packet::to_buffer() const {
                 setField(BMS.Config.IndoorUnit.Error, this->Config.IndoorUnit.Error);
 
                 setField(BMS.Config.IndoorUnit.SeenController.Primary, this->Config.IndoorUnit.SeenController.Primary);
-                setField(BMS.Config.IndoorUnit.SeenController.Secondary, this->Config.IndoorUnit.SeenController.Secondary);
+                if (!this->Features.Zones)   // SeenController.Secondary is incorrect name for models that support zone control, it is not set after second controller transmits.
+                    setField(BMS.Config.IndoorUnit.SeenController.Secondary, this->Config.IndoorUnit.SeenController.Secondary);
 
                 setField(BMS.Config.IndoorUnit.Lock.All, this->Config.IndoorUnit.Lock.All);
                 setField(BMS.Config.IndoorUnit.Lock.Timer, this->Config.IndoorUnit.Lock.Timer);

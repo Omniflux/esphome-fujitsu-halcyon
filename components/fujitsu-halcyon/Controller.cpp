@@ -166,7 +166,7 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
         tx_packet.SourceAddress = this->controller_address;
 
         if (this->initialization_stage == InitializationStageEnum::FindNextControllerTx) {
-//            this->next_token_destination_type = AddressTypeEnum::Controller;
+            this->next_token_destination_type = AddressTypeEnum::Controller;
             this->set_initialization_stage(InitializationStageEnum::FindNextControllerRx);
         }
 

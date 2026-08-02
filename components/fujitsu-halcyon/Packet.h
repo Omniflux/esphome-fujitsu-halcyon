@@ -81,6 +81,7 @@ struct Config {
 };
 
 struct Error {
+    uint8_t ErrorCodeExtended;
     uint8_t ErrorCode;
 };
 
@@ -180,6 +181,7 @@ constexpr struct BMS {
     } Config {};
 
     constexpr static struct Error_ {
+        constexpr static auto ErrorCodeExtended         = ByteMaskShiftData(3, 0b11110000);
         constexpr static auto ErrorCode                 = ByteMaskShiftData(4, 0b11111111);
     } Error {};
 

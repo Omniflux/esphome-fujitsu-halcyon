@@ -1,6 +1,7 @@
 #include "esphome-fujitsu-halcyon.h"
 
 #include <array>
+#include <cstdio>
 #include <type_traits>
 
 #include <esphome/core/helpers.h>
@@ -464,10 +465,21 @@ void FujitsuHalcyonController::update_from_device(const fujitsu_general::airstag
                 this->error_code_sensor->publish_state("");
             else
             {
-                const auto errorBytes = std::to_array<uint8_t>({ data.SourceAddress, data.Error.ErrorCode });
-                char pretty_buf[esphome::format_hex_pretty_size(errorBytes.size())];
-                esphome::format_hex_pretty_to(pretty_buf, errorBytes, ' ');
-                this->error_code_sensor->publish_state(pretty_buf);
+                const auto error_bytes = std::to_array<uint8_t>({ data.SourceAddress, data.Error.ErrorCode });
+                const auto error_buf_len = esphome::format_hex_pretty_size(error_bytes.size());
+                constexpr auto extended_error_buf_len = 4;
+
+                char error_buf[error_buf_len + extended_error_buf_len];
+                esphome::format_hex_pretty_to(error_buf, error_bytes, ' ');
+
+                if (data.Error.ErrorCodeExtended)
+                    std::sprintf(error_buf + error_buf_len - 1, ".%u", data.Error.ErrorCodeExtended);
+
+                // NOTE: Error codes D? appear to be remapped to J?, but maybe not in all cases?
+                if (data.Error.ErrorCode & 0xF0 == 0xD0)
+                    error_buf[3] = 'J';
+
+                this->error_code_sensor->publish_state(error_buf);
             }
         }
     }

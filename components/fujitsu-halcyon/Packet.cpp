@@ -64,7 +64,10 @@ Packet::Packet(Buffer buffer) {
             break;
 
         case PacketTypeEnum::Error:
-            this->Error.ErrorCode = getField(BMS.Error.ErrorCode);
+            if (this->SourceType == AddressTypeEnum::IndoorUnit) {
+                this->Error.ErrorCode = getField(BMS.Error.ErrorCode);
+                this->Error.ErrorCodeExtended = getField(BMS.Error.ErrorCodeExtended);
+            }
             break;
 
         case PacketTypeEnum::Features:
@@ -205,7 +208,12 @@ Packet::Buffer Packet::to_buffer() const {
             break;
 
         case PacketTypeEnum::Error:
-            setField(BMS.Error.ErrorCode, this->Error.ErrorCode);
+            if (SourceType == AddressTypeEnum::IndoorUnit) {
+                setField(BMS.Error.ErrorCode, this->Error.ErrorCode);
+                setField(BMS.Error.ErrorCodeExtended, this->Error.ErrorCodeExtended);
+                if (this->Error.ErrorCode)
+                    buffer[3] |= 0b00000001; // Unknown bit set in all captured error packets with error value from indoor unit
+            }
             break;
 
         case PacketTypeEnum::Features:

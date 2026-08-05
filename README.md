@@ -1,6 +1,6 @@
 # Fujitsu AirStage-H component for ESPHome
 
-An ESPHome component to control Fujitsu AirStage-H (product line previously known as Halcyon) units via the three wire (RWB) bus.
+An ESPHome component to control Fujitsu AirStage-H (product line previously known as Halcyon) units via the three-wire (RWB) bus.
 
 > [!WARNING]
 > Requires ESPHome 2026.3.0 or newer.
@@ -35,8 +35,7 @@ ota:
   - platform: esphome
     password: !secret ota_password
 
-#logger:
-#  level: DEBUG
+logger:
 
 button:
   - platform: restart
@@ -74,7 +73,7 @@ climate:
   #  protocol: 255
 ```
 
-You can use esphome (or Home Assistant) sensors to report the current temperature and humidity to the Home Assistant climate component
+You can use esphome (or Home Assistant) sensors to report the current temperature and humidity to the Home Assistant climate component.
 
 ```yaml
 sensor:
@@ -95,13 +94,11 @@ climate:
     humidity_sensor: my_humidity_sensor
 ```
 
-If your unit supports sensor switching and has had the function settings set appropriately (see your installation manual, usually settings `42` and `48`), your unit can also be set to use this sensor instead of the sensor in its air intake. When available, a switch will appear in the Home Assistant device page in the Configuration section named `Use Sensor`
-
-Configure TZSP and use Wireshark with [fujitsu-airstage-h-dissector](https://github.com/Omniflux/fujitsu-airstage-h-dissector) to debug / decode the Fujitsu serial protocol.
+If your unit supports sensor switching and has the function settings configured appropriately (see your installation manual, usually settings `42` and `48`), it can also be set to use this sensor instead of the sensor in its air intake. When available, a switch will appear in the Home Assistant device page in the Configuration section named `Use Sensor`.
 
 ## Per-unit feature configuration
 
-By default the controller probes the indoor unit with a `FeatureRequest` packet and uses the unit's reported feature set. Some indoor units do not support feature negotiation: they advertise `UnknownFlags == 2` (handled automatically by falling through to in-code `DefaultFeatures`), or they ignore the `FeatureRequest` and keep replying with `Config` packets (also handled automatically since the first such `Config` is treated as "no negotiation support"). A small number of units have been observed to enter a non-recoverable error state when sent a `FeatureRequest`; for those, set `autoconf: false` to skip the probe entirely.
+By default, the controller probes the indoor unit with a `FeatureRequest` packet and uses the unit's reported feature set. Some indoor units do not support feature negotiation: they advertise `UnknownFlags == 2` (handled automatically by falling through to in-code `DefaultFeatures`), or they ignore the `FeatureRequest` and keep replying with `Config` packets (also handled automatically since the first such `Config` is treated as "no negotiation support"). A small number of units have been observed to enter a non-recoverable error state when sent a `FeatureRequest`; for those, set `autoconf: false` to skip the probe entirely.
 
 When negotiation does not yield a `Features` packet, you can override the in-code defaults from YAML to match your specific indoor unit. Anything not specified keeps the in-code `DefaultFeatures` value.
 
@@ -166,6 +163,46 @@ The following entities are created automatically in Home Assistant. Feature-depe
 | Reinitialize | Button | Enabled | Re-run the initialization sequence without rebooting |
 | Function / Function Value / Function Unit | Number | Enabled | Raw function register access |
 | Function_Read / Function_Write | Button | Enabled / Disabled | Trigger a function register read or write |
+
+## Troubleshooting
+
+View the ESPHome log for the device.
+
+### Verify receiving data
+
+```yaml
+RX: 00 A0 XX XX XX XX XX XX
+```
+
+If there are no receive lines in the log, verify your UART I/O pins are correctly configured, and your remote control wires are securely connected.
+
+```yaml
+uart:
+  tx_pin: GPIO??
+  rx_pin: GPIO??
+```
+
+### Verify transmitting data
+
+```yaml
+TX: XX XX XX XX XX XX XX XX
+```
+
+If there are no transmit lines in the log, this component is not receiving the token allowing it to transmit.
+
+Ensure `controller_address` is configured correctly and, if `controller_address` > `0`, this component is powered on before (or at least simultaneously with) the preceding controllers. Secondary controllers only get one chance to register for the token when the primary (or preceding) controller powers on.
+
+You may want to temporarily disconnect the OEM remote controls and connect only this component with `controller_address: 0` to test without the registration window restriction.
+
+### OEM controller displays an error
+
+Ensure `controller_address` is configured correctly. Each address must be unique in a system. If you already have a hardwired OEM controller connected, it will be configured as address `0`. If you have two, they will be addresses `0` and `1`. This component must be configured as the next available address.
+
+Ensure `tx_pin` is configured correctly. If it is not, another component on the ESP device could be transmitting on the remote control bus, disrupting normal communications.
+
+## Debugging / Examining protocol
+
+Configure TZSP and use Wireshark with [fujitsu-airstage-h-dissector](https://github.com/Omniflux/fujitsu-airstage-h-dissector) to debug / decode the Fujitsu serial protocol.
 
 ## Related projects
 - FOSV's [Fuji-Atom-Interface](https://github.com/FOSV/Fuji-Atom-Interface) - Open hardware interface compatible with this component

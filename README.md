@@ -168,6 +168,9 @@ The following entities are created automatically in Home Assistant. Feature-depe
 | Reinitialize | Button | Enabled | Re-run the initialization sequence without rebooting |
 | Function / Function Value / Function Unit | Number | Enabled | Raw function register access |
 | Function_Read / Function_Write | Button | Enabled / Disabled | Trigger a function register read or write |
+| Zone `#` | Switch | Feature-dependent | Enable/Disable zone `#` |
+| Zone Group Day | Switch | Feature-dependent | Enable/Disable zone group Day |
+| Zone Group Night | Switch | Feature-dependent | Enable/Disable zone group Night |
 
 ## Related projects
 - FOSV's [Fuji-Atom-Interface](https://github.com/FOSV/Fuji-Atom-Interface) - Open hardware interface compatible with this component

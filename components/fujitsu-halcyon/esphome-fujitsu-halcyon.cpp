@@ -248,12 +248,15 @@ void FujitsuHalcyonController::dump_config() {
         if (features.Zones) {
             auto& zones = this->controller->get_zones();
 
-            std::string s;
-            for (auto i = 0; i < zones.EnabledZones.size(); i++)
+            // Build a comma-separated list of enabled zones
+            char buf[3 * zones.EnabledZones.size() + 1];
+            int offset = 0;
+            for (auto i = 0; i < zones.EnabledZones.size() && offset < sizeof(buf); i++)
                 if (zones.EnabledZones[i])
-                    s += std::to_string(i + 1) + ", ";
+                    offset += std::snprintf(buf + offset, sizeof(buf) - offset, "%u, ", i + 1);
+            buf[offset ? offset - 2 : 0] = '\0';
 
-            ESP_LOGCONFIG(TAG, "    - Zones: %s", s.empty() ? "NONE" : s.substr(0, s.length() - 2).c_str());
+            ESP_LOGCONFIG(TAG, "    - Zones: %s", buf[0] ? buf : "NONE");
             ESP_LOGCONFIG(TAG, "        Common Zone: %s", zones.ZoneCommon ? "YES" : "NO");
         }
     }

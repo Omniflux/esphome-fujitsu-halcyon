@@ -127,7 +127,7 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
 
     // Update initialization stage sensor
     char buf[8];
-    snprintf(buf, sizeof(buf), "(%u/%u)", static_cast<stage_t>(stage), static_cast<stage_t>(InitializationStageEnum::Complete));
+    std::snprintf(buf, sizeof(buf), "(%u/%u)", static_cast<stage_t>(stage), static_cast<stage_t>(InitializationStageEnum::Complete));
     this->initialization_sensor->publish_state(buf);
     ESP_LOGD(TAG, "Initialization stage: %s", buf);
 
@@ -143,33 +143,30 @@ void FujitsuHalcyonController::on_initialization_stage(const fujitsu_general::ai
     auto& features = this->controller->get_features();
 
     // Publish supported features as a human-readable diagnostic string.
-    // Built with basic string concatenation — std::format is not available in ESPHome.
     {
-        std::string s;
+        char buf[255];
+        std::snprintf(buf, sizeof(buf), "Mode: %s%s%s%s%s | Fan: %s%s%s%s%s" "%s%s%s%s%s%s%s",
+            features.Mode.Auto ? " Auto" : "",
+            features.Mode.Heat ? " Heat" : "",
+            features.Mode.Cool ? " Cool" : "",
+            features.Mode.Dry  ? " Dry"  : "",
+            features.Mode.Fan  ? " Fan"  : "",
 
-        s += "Mode:";
-        if (features.Mode.Auto)   s += " Auto";
-        if (features.Mode.Heat)   s += " Heat";
-        if (features.Mode.Cool)   s += " Cool";
-        if (features.Mode.Dry)    s += " Dry";
-        if (features.Mode.Fan)    s += " Fan";
+            features.FanSpeed.Auto   ? " Auto"   : "",
+            features.FanSpeed.High   ? " High"   : "",
+            features.FanSpeed.Medium ? " Medium" : "",
+            features.FanSpeed.Low    ? " Low"    : "",
+            features.FanSpeed.Quiet  ? " Quiet"  : "",
 
-        s += " | Fan:";
-        if (features.FanSpeed.Auto)   s += " Auto";
-        if (features.FanSpeed.High)   s += " High";
-        if (features.FanSpeed.Medium) s += " Medium";
-        if (features.FanSpeed.Low)    s += " Low";
-        if (features.FanSpeed.Quiet)  s += " Quiet";
-
-        if (features.EconomyMode)       s += " | Economy";
-        if (features.FilterTimer)       s += " | Filter Timer";
-        if (features.SensorSwitching)   s += " | Sensor Switching";
-        if (features.Maintenance)       s += " | Maintenance";
-        if (features.VerticalLouvers)   s += " | V.Louvers";
-        if (features.HorizontalLouvers) s += " | H.Louvers";
-        if (features.Zones)             s += " | Zones";
-
-        this->supported_features_sensor->publish_state(s);
+            features.EconomyMode       ? " | Economy"          : "",
+            features.FilterTimer       ? " | Filter Timer"     : "",
+            features.SensorSwitching   ? " | Sensor Switching" : "",
+            features.Maintenance       ? " | Maintenance"      : "",
+            features.VerticalLouvers   ? " | V.Louvers"        : "",
+            features.HorizontalLouvers ? " | H.Louvers"        : "",
+            features.Zones             ? " | Zones"            : ""
+        );
+        this->supported_features_sensor->publish_state(buf);
     }
 
     if (features.SensorSwitching && this->temperature_sensor_ != nullptr) {
@@ -479,7 +476,7 @@ void FujitsuHalcyonController::update_from_device(const fujitsu_general::airstag
                     std::sprintf(error_buf + error_buf_len - 1, ".%u", data.Error.ErrorCodeExtended);
 
                 // NOTE: Error codes D? appear to be remapped to J?, but maybe not in all cases?
-                if (data.Error.ErrorCode & 0xF0 == 0xD0)
+                if ((data.Error.ErrorCode & 0xF0) == 0xD0)
                     error_buf[3] = 'J';
 
                 this->error_code_sensor->publish_state(error_buf);

@@ -434,7 +434,7 @@ void FujitsuHalcyonController::update_from_device(const fujitsu_general::airstag
                     std::sprintf(error_buf + error_buf_len - 1, ".%u", data.Error.ErrorCodeExtended);
 
                 // NOTE: Error codes D? appear to be remapped to J?, but maybe not in all cases?
-                if (data.Error.ErrorCode & 0xF0 == 0xD0)
+                if ((data.Error.ErrorCode & 0xF0) == 0xD0)
                     error_buf[3] = 'J';
 
                 this->error_code_sensor->publish_state(error_buf);

@@ -242,6 +242,8 @@ Packet::Buffer Packet::to_buffer() const {
 
                 buffer[6] |= 0b00000001; // Unknown bit set in all captured features packets from indoor unit
             }
+            else
+                buffer[6] |= 0b00001110; // Unknown bits set in request from zone capable remote control
             break;
 
         case PacketTypeEnum::Function:

@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include <esphome/core/helpers.h>
+#include <soc/uart_reg.h>
 
 namespace esphome::fujitsu_general_airstage_h_controller {
 
@@ -17,14 +18,23 @@ void FujitsuHalcyonController::loop() {
 }
 
 void FujitsuHalcyonController::setup() {
+    const auto uart_num = static_cast<uart_port_t>(static_cast<uart::IDFUARTComponent*>(this->parent_)->get_hw_serial_number());
+
     // Currently no way to do this in IDFUARTComponent YAML configuration without setting the flow control pin.
     // Using RTS is not needed, but the side effect of suppressing input during output is, as the LIN chip provides loopback.
-    if (auto err = uart_set_mode(static_cast<uart_port_t>(static_cast<uart::IDFUARTComponent*>(this->parent_)->get_hw_serial_number()), UART_MODE_RS485_HALF_DUPLEX); err != ESP_OK) {
+    if (auto err = uart_set_mode(uart_num, UART_MODE_RS485_HALF_DUPLEX); err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to set UART mode: %s", esp_err_to_name(err));
         this->mark_failed();
         return;
     }
 
+    // On most current ESP-IDF targets, uart_ll_set_mode_rs485_half_duplex() also sets
+    // UART_DL0_EN and UART_DL1_EN, each of which extends the stop bit by one bit time.
+    // At the 500 baud of this bus that is 4 ms per byte and 28 ms per 8 byte frame.
+    // Indoor units tolerate the malformed timing; OEM wired controllers do not, and
+    // drop this component from the token ring after the initial handshake.
+    // Reported upstream in espressif/esp-idf#12568, fix proposed in #12569, not merged.
+    REG_CLR_BIT(UART_RS485_CONF_REG(uart_num), UART_DL0_EN_M | UART_DL1_EN_M);
     this->controller = new fujitsu_general::airstage::h::Controller(
         this->controller_address_,
         {

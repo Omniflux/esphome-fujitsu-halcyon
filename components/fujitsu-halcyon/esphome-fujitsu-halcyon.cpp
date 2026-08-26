@@ -35,7 +35,7 @@ void FujitsuHalcyonController::setup() {
     // drop this component from the token ring after the initial handshake.
     // Reported upstream in espressif/esp-idf#12568, fix proposed in #12569, not merged.
     REG_CLR_BIT(UART_RS485_CONF_REG(uart_num), UART_DL0_EN_M | UART_DL1_EN_M);
-    
+
     this->controller = new fujitsu_general::airstage::h::Controller(
         this->controller_address_,
         {

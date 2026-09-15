@@ -71,6 +71,9 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         void set_standby_sensor(binary_sensor::BinarySensor* s) { this->standby_sensor_ = s; }
         void set_error_sensor(binary_sensor::BinarySensor* s) { this->error_sensor_ = s; }
         void set_connected_sensor(binary_sensor::BinarySensor* s) { this->connected_sensor_ = s; }
+        // ON when no valid reading has arrived from temperature_sensor_id for
+        // sensor_timeout, which is when the indoor unit goes back to its own sensor.
+        void set_sensor_stale_sensor(binary_sensor::BinarySensor* s) { this->sensor_stale_sensor_ = s; }
         void set_error_code_sensor(text_sensor::TextSensor* s) { this->error_code_sensor_ = s; }
         void set_initialization_sensor(text_sensor::TextSensor* s) { this->initialization_sensor_ = s; }
         void set_supported_features_sensor(text_sensor::TextSensor* s) { this->supported_features_sensor_ = s; }
@@ -181,6 +184,7 @@ class FujitsuHalcyonController : public Component, public climate::Climate, publ
         binary_sensor::BinarySensor* standby_sensor_{nullptr};
         binary_sensor::BinarySensor* error_sensor_{nullptr};
         binary_sensor::BinarySensor* connected_sensor_{nullptr};
+        binary_sensor::BinarySensor* sensor_stale_sensor_{nullptr};
         text_sensor::TextSensor* error_code_sensor_{nullptr};
         text_sensor::TextSensor* initialization_sensor_{nullptr};
         text_sensor::TextSensor* supported_features_sensor_{nullptr};

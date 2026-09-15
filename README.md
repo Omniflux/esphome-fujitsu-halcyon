@@ -124,7 +124,7 @@ climate:
 
 If your unit supports sensor switching and has the function settings configured appropriately (see your installation manual, usually settings `42` and `48`), it can also be set to use this sensor instead of the sensor in its air intake. Declare the `use_sensor` entity (see below) to expose that switch. The switch remembers its state across reboots.
 
-The unit is only told to use the external sensor while a valid reading is available. If the sensor becomes unavailable, or no reading arrives for `sensor_timeout` (default `5min`), the unit is switched back to its own sensor and a warning is logged. As soon as readings resume, the external sensor is handed back automatically. The Use Sensor switch keeps its state in Home Assistant during this time, it reflects your intent. Set `sensor_timeout: 0s` to disable the check and keep sending the last reading.
+The unit is only told to use the external sensor while a valid reading is available. If the sensor becomes unavailable, or no reading arrives for `sensor_timeout` (default `5min`), the unit is switched back to its own sensor and a warning is logged. As soon as readings resume, the external sensor is handed back automatically. The Use Sensor switch keeps its state in Home Assistant during this time, it reflects your intent. Declaring `use_sensor` also creates a **Temperature Sensor Stale** diagnostic that reports the fallback is active. Set `sensor_timeout: 0s` to disable the check and keep sending the last reading.
 
 ```yaml
 climate:
@@ -211,6 +211,7 @@ If you declare a feature entity that the indoor unit does not actually report, t
 | Error Code | Text sensor | Enabled | Fault code in `AA BB.CCC` (unit address + error code + extended error code) |
 | Initialization Stage | Text sensor | Enabled | Current initialization progress with a label, for example `Complete (7/7)` |
 | Supported Features | Text sensor | Enabled | List of features reported by the indoor unit, published once at initialization. Example: `Mode: Auto Heat Cool Dry Fan \| Fan: Auto High Medium Low Quiet \| Economy \| Sensor Switching \| Vertical Louvers \| Horizontal Louvers \| Zones` |
+| Temperature Sensor Stale | Binary sensor | Enabled, with `use_sensor` | On when no valid reading has arrived from `temperature_sensor_id` for `sensor_timeout`, which is when the unit goes back to its own sensor |
 | Remote Temperature Sensor | Sensor | If declared | Temperature reported by another controller on the bus (see `temperature_controller_address`) |
 | Filter Timer Expired | Binary sensor | If declared | Set when the filter maintenance timer has elapsed |
 

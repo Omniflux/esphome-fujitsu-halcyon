@@ -112,6 +112,8 @@ void FujitsuHalcyonController::check_sensor_timeout_() {
     // Also reached when no reading has ever arrived since boot (the timer starts
     // in setup), so a switch left on with a dead sensor is reported too.
     this->temperature_stale_ = true;
+    if (this->sensor_stale_sensor_ != nullptr)
+        this->sensor_stale_sensor_->publish_state(true);
 
     if (this->use_sensor_switch_ != nullptr && this->use_sensor_switch_->state) {
         ESP_LOGW(TAG, "No valid reading from the temperature sensor for %u s, the unit uses its own sensor until readings resume",
@@ -177,6 +179,8 @@ void FujitsuHalcyonController::setup() {
     this->controller->set_autoconf(this->autoconf_);
 
     this->connected_sensor_->publish_initial_state(false);
+    if (this->sensor_stale_sensor_ != nullptr)
+        this->sensor_stale_sensor_->publish_initial_state(false);
     this->init_started_ms_ = millis();
 
     // Diagnostic for the common "reads state but cannot control" failure mode:
@@ -213,6 +217,8 @@ void FujitsuHalcyonController::setup() {
                         ESP_LOGI(TAG, "Temperature sensor readings resumed");
                     this->temperature_valid_ = true;
                     this->temperature_stale_ = false;
+                    if (this->sensor_stale_sensor_ != nullptr)
+                        this->sensor_stale_sensor_->publish_state(false);
                     this->apply_use_sensor_();
                 }
 

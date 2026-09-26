@@ -181,10 +181,9 @@ Packet::Buffer Packet::to_buffer() const {
                 setField(BMS.Config.Controller.AdvanceVerticalLouver, this->Config.Controller.AdvanceVerticalLouver);
                 setField(BMS.Config.Controller.AdvanceHorizontalLouver, this->Config.Controller.AdvanceHorizontalLouver);
 
-                setField(BMS.Config.Controller.Temperature,
-                    (int(this->Config.Controller.Temperature) << 1) +
-                    int(std::fmod(std::round(this->Config.Controller.Temperature * 2), 2))
-                );
+                // Encode in half-degree units. Round the whole value at once so
+                // the carry is not lost (e.g. 21.8 -> 22.0, not 21.0).
+                setField(BMS.Config.Controller.Temperature, std::lround(this->Config.Controller.Temperature * 2));
 
                 setField(BMS.Config.Controller.UseControllerSensor, this->Config.Controller.UseControllerSensor);
                 setField(BMS.Config.Controller.Maintenance, this->Config.Controller.Maintenance);

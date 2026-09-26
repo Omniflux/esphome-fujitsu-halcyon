@@ -8,8 +8,10 @@ external_components:
 #  - source: github://Omniflux/esphome-tzsp
   - source: github://Omniflux/esphome-fujitsu-halcyon
 
-packages:
-  wifi: !include common/wifi.yaml
+# Add wifi_ssid and wifi_password to your secrets.yaml
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
 
 esphome:
   name: ${device_name}
@@ -27,7 +29,7 @@ ota:
   - platform: esphome
     password: !secret ota_password
 
-#logger:
+logger:
 #  level: DEBUG
 
 button:
@@ -45,6 +47,10 @@ uart:
   rx_pin: GPIO19  # Device dependent
   baud_rate: 500
   parity: EVEN
+  # The protocol depends on these for packet framing. The component auto-applies
+  # them if omitted, they are shown here so the requirement is visible.
+  rx_timeout: 2
+  rx_full_threshold: 16
 
 climate:
 - platform: fujitsu-halcyon
@@ -55,9 +61,21 @@ climate:
   #temperature_controller_address: 0  # Fujitsu controller address to read temperature from
 
   #temperature_sensor_id: my_temperature_sensor  # ESPHome sensor to read temperature from
+  #sensor_timeout: 5min  # Fall back to the unit's own sensor after this long without a valid reading (0s disables)
   #humidity_sensor: my_humidity_sensor  # ESPHome sensor to read humidity from
 
   #ignore_lock: true  # Ignore feature lock
+  #init_timeout: 30s  # Restart initialization if it has not completed after this long (0s disables)
+
+  # Optional feature entities. Uncomment the ones your unit reports (check the
+  # Supported Features sensor). Each uses a default name, add `name:` to customize.
+  # Zones have their own block, see the README.
+  #filter_timer_expired:
+  #reset_filter_timer:
+  #advance_vertical_louver:
+  #advance_horizontal_louver:
+  #use_sensor:      # also needs temperature_sensor_id and unit function settings 42 and 48
+  #remote_sensor:   # needs another controller on the bus, see temperature_controller_address
 
   # To capture communications for debugging / analysis
   # Use Wireshark with https://github.com/Omniflux/fujitsu-airstage-h-dissector

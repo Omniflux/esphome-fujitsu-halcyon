@@ -1,0 +1,63 @@
+# Minimal configuration used by CI to compile the component against the local
+# source in this repository. It is not meant to be flashed. See example.yaml for
+# a real, documented configuration.
+
+esphome:
+  name: fujitsu-halcyon-test
+  friendly_name: Fujitsu Halcyon Test
+
+esp32:
+  board: m5stack-atom
+  framework:
+    type: esp-idf
+
+external_components:
+  - source:
+      type: local
+      path: ../components
+
+logger:
+
+# Dummy credentials so CI also compiles the Wi-Fi and API path that real
+# installs run. Not used, the binary is never flashed.
+wifi:
+  ssid: "ci-test-ssid"
+  password: "ci-test-password"
+
+api:
+
+# Source for temperature_sensor_id, which use_sensor now requires.
+sensor:
+  - platform: template
+    id: test_temperature
+    name: Test Temperature
+
+uart:
+  tx_pin: GPIO22
+  rx_pin: GPIO19
+  baud_rate: 500
+  parity: EVEN
+  rx_timeout: 2
+  rx_full_threshold: 16
+
+climate:
+  - platform: fujitsu-halcyon
+    name: None
+    controller_address: 0
+    temperature_sensor_id: test_temperature
+
+    # Exercise the capability override codegen too.
+    supported_features: [FILTER_TIMER, SENSOR_SWITCHING, MAINTENANCE, ECONOMY]
+
+    # Declare every optional feature entity so all of them are compiled, not just
+    # the always-present ones.
+    filter_timer_expired:
+    reset_filter_timer:
+    advance_vertical_louver:
+    advance_horizontal_louver:
+    use_sensor:
+    remote_sensor:
+    zone_1:
+    zone_2:
+    zone_group_day:
+    zone_group_night:

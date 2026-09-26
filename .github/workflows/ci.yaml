@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # Weekly, so an ESPHome release that breaks the build is caught here before
+    # users report it.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    name: Compile (ESPHome ${{ matrix.esphome.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        esphome:
+          - name: stable
+            spec: esphome
+          - name: dev
+            spec: git+https://github.com/esphome/esphome@dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cache PlatformIO and pip
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: ${{ runner.os }}-${{ matrix.esphome.name }}-pio-${{ hashFiles('tests/test.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.esphome.name }}-pio-
+
+      - name: Install ESPHome
+        run: pip install ${{ matrix.esphome.spec }}
+
+      - name: Show ESPHome version
+        run: esphome version
+
+      - name: Compile the test configuration
+        run: esphome compile tests/test.yaml

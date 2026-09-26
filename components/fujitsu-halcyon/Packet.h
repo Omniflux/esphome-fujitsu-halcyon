@@ -5,6 +5,7 @@
 #include <bitset>
 #include <concepts>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 
 namespace fujitsu_general::airstage::h {
@@ -319,7 +320,17 @@ class Packet {
         struct ZoneConfig ZoneConfig {};
         struct ZoneFunction ZoneFunction {};
 
-        static void invert_buffer(Buffer& buffer) { *reinterpret_cast<uint64_t*>(buffer.data()) = ~*reinterpret_cast<uint64_t*>(buffer.data()); };
+        // Bitwise-invert the whole frame. Uses memcpy rather than
+        // reinterpret_cast<uint64_t*> to avoid the strict-aliasing UB and the
+        // unaligned 64-bit access that would fault on some targets (e.g. RISC-V
+        // ESP32-C3, ESP8266); the compiler still lowers this to a single word op.
+        static void invert_buffer(Buffer& buffer) {
+            static_assert(sizeof(Buffer) == sizeof(uint64_t), "Frame must be exactly 64 bits wide");
+            uint64_t word;
+            std::memcpy(&word, buffer.data(), sizeof(word));
+            word = ~word;
+            std::memcpy(buffer.data(), &word, sizeof(word));
+        };
 
     private:
         // std::bit_compress/std::bit_expand have been proposed for c++ STL (P3104), but are not available now so use these instead

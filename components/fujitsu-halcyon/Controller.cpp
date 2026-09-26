@@ -10,7 +10,7 @@ using esphome::esp_log_printf_;
 
 namespace fujitsu_general::airstage::h {
 
-static const char* TAG = "fujitsu_general::airstage::h::Controller";
+static const char* TAG = "fujitsu_halcyon";
 
 void Controller::process_uart_data() {
     auto buffer_len = this->uart_available_bytes();
@@ -20,7 +20,7 @@ void Controller::process_uart_data() {
         // Discard partial frame
         if (auto discard = buffer_len % buffer.size()) {
             this->uart_read_bytes(buffer.data(), discard);
-            ESP_LOGW(TAG, "Discarded %d bytes", discard);
+            ESP_LOGW(TAG, "Discarded %zu bytes", discard);
         }
 
         // For each frame
@@ -76,18 +76,15 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
         switch (packet.Type) {
             [[likely]] case PacketTypeEnum::Config:
                 if (this->initialization_stage == InitializationStageEnum::DetectFeatureSupport) {
-                    // Advance to FindNextControllerTx (skip feature negotiation entirely) if:
-                    //  - autoconf is disabled (use the configured features directly), or
-                    //  - the IU's UnknownFlags == 2 (no feature negotiation support).
-                    // Otherwise, transition to FeatureRequestTx to send a FeatureRequest packet
-                    // when our turn with the token comes around. The actual transmission and
-                    // the subsequent transition to FeatureRequestRx happen later in this function.
-                    // Note: this->features is already initialized to DefaultFeatures (or to a
-                    // user-supplied override via set_features()), so no assignment is needed here.
-                    if (!this->autoconf ||
-                        packet.Config.IndoorUnit.UnknownFlags == 2) {
+                    // Advance to FindNextControllerTx (skip feature negotiation entirely) if
+                    // autoconf is disabled, otherwise transition to FeatureRequestTx to send a
+                    // FeatureRequest packet when our turn with the token comes around. The
+                    // actual transmission and the subsequent transition to FeatureRequestRx
+                    // happen later in this function. this->features is already initialized to
+                    // DefaultFeatures (or to a user-supplied override via set_features()).
+                    if (!this->autoconf)
                         this->set_initialization_stage(InitializationStageEnum::FindNextControllerTx);
-                    } else
+                    else
                         this->set_initialization_stage(InitializationStageEnum::FeatureRequestTx);
                 }
                 else if (this->initialization_stage == InitializationStageEnum::FeatureRequestRx) {
@@ -113,6 +110,15 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
                 break;
 
             case PacketTypeEnum::Error:
+                // A unit without feature negotiation answers the FeatureRequest with an
+                // empty error instead of a Features packet. Take it as the answer and
+                // carry on with the features already in this->features.
+                if (this->initialization_stage == InitializationStageEnum::FeatureRequestRx &&
+                    packet.Error.ErrorCode == 0 && packet.Error.ErrorCodeExtended == 0) {
+                    ESP_LOGW(TAG, "Indoor unit refused the feature request, using the configured features. Set autoconf: false to stop asking");
+                    this->set_initialization_stage(InitializationStageEnum::FindNextControllerTx);
+                }
+
                 if (this->callbacks.Error)
                     deferred_callback = [&](){ this->callbacks.Error(packet); };
                 break;
@@ -286,7 +292,12 @@ void Controller::process_packet(const Packet::Buffer& buffer, bool lastPacketOnW
 }
 
 void Controller::set_current_temperature(float temperature) {
-    this->changed_configuration.Controller.Temperature = std::clamp(std::isfinite(temperature) ? temperature : 0, MinTemperature, MaxTemperature);
+    // An unavailable source sensor reports NaN. Keep the last good value rather
+    // than sending 0 C, which would tell the unit the room is at freezing.
+    if (!std::isfinite(temperature))
+        return;
+
+    this->changed_configuration.Controller.Temperature = std::clamp(temperature, MinTemperature, MaxTemperature);
     // Do not set configuration_changed flag - does not require write bit set
 }
 

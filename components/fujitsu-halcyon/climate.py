@@ -88,6 +88,7 @@ CONF_RESET_FILTER_TIMER = "reset_filter_timer"
 CONF_FILTER_TIMER_EXPIRED = "filter_timer_expired"
 CONF_REINITIALIZE = "reinitialize"
 CONF_CONNECTED = "connected"
+CONF_SENSOR_STALE = "sensor_stale"
 # The diagnostic text sensor listing what the unit reports. Named apart from the
 # supported_features override list above.
 CONF_REPORTED_FEATURES = "reported_features"
@@ -247,6 +248,10 @@ CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
             entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
             device_class=DEVICE_CLASS_CONNECTIVITY
         ),
+        cv.Optional(CONF_SENSOR_STALE): binary_sensor.binary_sensor_schema(
+            entity_category=ENTITY_CATEGORY_DIAGNOSTIC,
+            device_class=DEVICE_CLASS_PROBLEM
+        ),
         cv.Optional(CONF_REPORTED_FEATURES, default={CONF_NAME: "Supported Features"}): text_sensor.text_sensor_schema(
             entity_category=ENTITY_CATEGORY_DIAGNOSTIC
         ),
@@ -275,6 +280,15 @@ CONFIG_SCHEMA = climate.climate_schema(FujitsuHalcyonController).extend(
 if TZSP_AVAILABLE:
     CONFIG_SCHEMA = CONFIG_SCHEMA.extend(tzsp.TZSP_SENDER_SCHEMA)
 
+def _default_sensor_stale(config):
+    # Only meaningful when the unit can be switched to the external sensor, so it
+    # is created by default alongside use_sensor and nowhere else.
+    if isinstance(config, dict) and CONF_USE_SENSOR in config and CONF_SENSOR_STALE not in config:
+        config = dict(config)
+        config[CONF_SENSOR_STALE] = {CONF_NAME: "Temperature Sensor Stale"}
+
+    return config
+
 def _validate_use_sensor(config):
     # The switch tells the unit to use the temperature this component reports to
     # it, so without a sensor to report there is nothing for it to switch to.
@@ -285,9 +299,16 @@ def _validate_use_sensor(config):
             path=[CONF_USE_SENSOR]
         )
 
+    if CONF_SENSOR_STALE in config and CONF_USE_SENSOR not in config:
+        raise cv.Invalid(
+            f"{CONF_SENSOR_STALE} needs {CONF_USE_SENSOR} to be set, "
+            "the unit only falls back to its own sensor when it was switched to the external one",
+            path=[CONF_SENSOR_STALE]
+        )
+
     return config
 
-CONFIG_SCHEMA = cv.All(CONFIG_SCHEMA, _validate_use_sensor)
+CONFIG_SCHEMA = cv.All(_default_sensor_stale, CONFIG_SCHEMA, _validate_use_sensor)
 
 def check_platform(config):
     # This component relies on the ESP-IDF RS485 half-duplex UART driver
@@ -452,6 +473,9 @@ async def to_code(config: ConfigType) -> None:
         await cg.register_parented(sw, var)
         cg.add(var.set_use_sensor_switch(sw))
         cg.add(var.set_use_sensor_declared(True))
+
+        s = await binary_sensor.new_binary_sensor(config[CONF_SENSOR_STALE])
+        cg.add(var.set_sensor_stale_sensor(s))
 
     if CONF_REMOTE_SENSOR in config:
         s = await sensor.new_sensor(config[CONF_REMOTE_SENSOR])
